@@ -206,6 +206,8 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         tooltip_show: true,
         tooltip_order: undefined,
         tooltip_grouped: true,
+        tooltip_columns_enabled: false,
+        tooltip_columns_maxSize: 10,
         tooltip_format_title: undefined,
         tooltip_format_name: undefined,
         tooltip_format_value: undefined,
