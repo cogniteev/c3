@@ -97,41 +97,99 @@ c3_chart_internal_fn.getTooltipSortFunction = function() {
         };
     }
 };
-c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+
+c3_chart_internal_fn.getTooltipDef = function (d, defaultTitleFormat, defaultValueFormat, color) {
     var $$ = this, config = $$.config,
         titleFormat = config.tooltip_format_title || defaultTitleFormat,
         nameFormat = config.tooltip_format_name || function (name) { return name; },
-        valueFormat = config.tooltip_format_value || defaultValueFormat,
-        text, i, title, value, name, bgcolor;
+        valueFormat = config.tooltip_format_value || defaultValueFormat;
 
     var tooltipSortFunction = this.getTooltipSortFunction();
     if(tooltipSortFunction) {
         d.sort(tooltipSortFunction);
     }
 
-    for (i = 0; i < d.length; i++) {
-        if (! (d[i] && (d[i].value || d[i].value === 0))) { continue; }
+    var def = {
+        data: d.reduce(function (acc, point) {
+            if (!point || point.name === null || !(point.value || point.value === 0)) {
+                return acc;
+            }
 
-        if (! text) {
-            title = sanitise(titleFormat ? titleFormat(d[i].x) : d[i].x);
-            text = "<table class='" + $$.CLASS.tooltip + "'>" + (title || title === 0 ? "<tr><th colspan='2'>" + title + "</th></tr>" : "");
-        }
+            var value = sanitise(valueFormat(point.value, point.ratio, point.id, point.index, point));
+            if (value === undefined) {
+                return acc;
+            }
 
-        value = sanitise(valueFormat(d[i].value, d[i].ratio, d[i].id, d[i].index, d));
-        if (value !== undefined) {
-            // Skip elements when their name is set to null
-            if (d[i].name === null) { continue; }
-            name = sanitise(nameFormat(d[i].name, d[i].ratio, d[i].id, d[i].index));
-            bgcolor = $$.levelColor ? $$.levelColor(d[i].value) : color(d[i].id);
+            acc.push({
+                d: point,
+                cssClass: $$.CLASS.tooltipName + '-' + $$.getTargetSelectorSuffix(point.id),
+                bgColor: $$.levelColor ? $$.levelColor(point.value) : color(point.id),
+                value: value,
+                name: sanitise(nameFormat(point.name, point.ratio, point.id, point.index))
+            });
 
-            text += "<tr class='" + $$.CLASS.tooltipName + "-" + $$.getTargetSelectorSuffix(d[i].id) + "'>";
-            text += "<td class='name'><span style='background-color:" + bgcolor + "'></span>" + name + "</td>";
-            text += "<td class='value'>" + value + "</td>";
-            text += "</tr>";
-        }
+            return acc;
+        }, [])
+    };
+
+    if (def.data.length > 0) {
+        var x = def.data[0].d.x;
+        def.title = sanitise(titleFormat ? titleFormat(x) : x);
     }
-    return text + "</table>";
+
+    return def;
 };
+
+c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+    var $$ = this,
+        config = $$.config,
+        def = $$.getTooltipDef(d, defaultTitleFormat, defaultValueFormat, color);
+
+    var drawRow = function(row) {
+        return '<tr class="' + row.cssClass + '">' +
+                    '<td class="name">' +
+                        '<span style="background-color:' + row.bgColor + ';"></span> ' +
+                        row.name +
+                    '</td>' +
+                    '<td class="value">' +
+                        row.value +
+                    '</td>' +
+                '</tr>';
+    };
+
+    var colspan;
+    var html = '';
+    if (config.tooltip_columns_enabled) {
+        var columnsSize = Math.ceil(def.data.length / Math.ceil(def.data.length / config.tooltip_columns_maxSize));
+
+        colspan = Math.ceil(def.data.length / columnsSize);
+
+        html += '<tr style="border:none;">';
+        def.data.map(function(item, index) {
+            return index % columnsSize === 0 ? def.data.slice(index, index + columnsSize) : null;
+        }).filter(function(item) {
+            return item;
+        }).forEach(function(column) {
+            html += '<td style="vertical-align:top;padding:0;border:none;background:none;"><table>';
+            for (var i = 0; i < column.length; i++) {
+                html += drawRow(column[i]);
+            }
+            html += '</table></td>';
+        });
+        html += '</tr>';
+    } else {
+        colspan = 2;
+        html = def.data.reduce(function(html, row) {
+            return html + drawRow(row);
+        }, html);
+    }
+
+    return '<table class="' + $$.CLASS.tooltip + '">' +
+            ((def.title || def.title === 0) ? '<tr><th colspan="' + colspan + '">' + def.title + '</th></tr>' : '') +
+            html +
+            '</table>';
+};
+
 c3_chart_internal_fn.tooltipPosition = function (dataToShow, tWidth, tHeight, element) {
     var $$ = this, config = $$.config, d3 = $$.d3;
     var svgLeft, tooltipLeft, tooltipRight, tooltipTop, chartRight;
