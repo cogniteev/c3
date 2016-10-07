@@ -1188,7 +1188,7 @@
             axis_y_label: {},
             axis_y_tick_format: undefined,
             axis_y_tick_outer: true,
-            axis_y_tick_values: null,        
+            axis_y_tick_values: null,
             axis_y_tick_rotate: 0,
             axis_y_tick_count: undefined,
             axis_y_tick_time_value: undefined,
@@ -1234,6 +1234,7 @@
             bar_width_ratio: 0.6,
             bar_width_max: undefined,
             bar_zerobased: true,
+            bar_space: 0,
             // area
             area_zerobased: true,
             area_above: false,
@@ -1270,7 +1271,10 @@
             regions: [],
             // tooltip - show when mouseover on each data
             tooltip_show: true,
+            tooltip_order: undefined,
             tooltip_grouped: true,
+            tooltip_columns_enabled: false,
+            tooltip_columns_maxSize: 10,
             tooltip_format_title: undefined,
             tooltip_format_name: undefined,
             tooltip_format_value: undefined,
@@ -1292,6 +1296,9 @@
                 left: 0
             },
             title_position: 'top-center',
+            //TouchEvent configuration
+            touch_tap_radius : 20,  //touch movement must be less than this to be a 'tap'
+            touch_tap_delay : 500,  //clicks are suppressed for this many ms after a tap
         };
 
         Object.keys(this.additionalConfig).forEach(function (key) {
@@ -1879,18 +1886,32 @@
         var config = this.config;
         return typeof(config.data_order) === 'string' && config.data_order.toLowerCase() === 'asc';
     };
-    c3_chart_internal_fn.orderTargets = function (targets) {
+    c3_chart_internal_fn.getOrderFunction = function() {
         var $$ = this, config = $$.config, orderAsc = $$.isOrderAsc(), orderDesc = $$.isOrderDesc();
         if (orderAsc || orderDesc) {
-            targets.sort(function (t1, t2) {
+            return function (t1, t2) {
                 var reducer = function (p, c) { return p + Math.abs(c.value); };
                 var t1Sum = t1.values.reduce(reducer, 0),
                     t2Sum = t2.values.reduce(reducer, 0);
-                return orderAsc ? t2Sum - t1Sum : t1Sum - t2Sum;
-            });
+                return orderDesc ? t2Sum - t1Sum : t1Sum - t2Sum;
+            };
         } else if (isFunction(config.data_order)) {
-            targets.sort(config.data_order);
-        } // TODO: accept name array for order
+            return config.data_order;
+        } else if (isArray(config.data_order)) {
+            var order = config.data_order;
+            return function (t1, t2) {
+                return order.indexOf(t1.id) - order.indexOf(t2.id);
+            };
+        }
+    };
+    c3_chart_internal_fn.orderTargets = function (targets) {
+        var fct = this.getOrderFunction();
+        if (fct) {
+            targets.sort(fct);
+            if (this.isOrderAsc() || this.isOrderDesc()) {
+                targets.reverse();
+            }
+        }
         return targets;
     };
     c3_chart_internal_fn.filterByX = function (targets, x) {
@@ -1993,13 +2014,12 @@
         return Math.sqrt(Math.pow(x - pos[xIndex], 2) + Math.pow(y - pos[yIndex], 2));
     };
     c3_chart_internal_fn.convertValuesToStep = function (values) {
+        var converted = [].concat(values), i;
 
         if (!this.isCategorized()) {
             return values;
         }
-        
-        var converted = values.slice(0), i;
-        
+
         for (i = values.length + 1; 0 < i; i--) {
             converted[i] = converted[i - 1];
         }
@@ -2460,7 +2480,27 @@
             .attr("height", h);
     };
     c3_chart_internal_fn.generateEventRectsForSingleX = function (eventRectEnter) {
-        var $$ = this, d3 = $$.d3, config = $$.config;
+        var $$ = this, d3 = $$.d3, config = $$.config,
+            tap = false, tapX;
+
+        function click(shape, d) {
+            var index = d.index;
+            if ($$.hasArcType() || !$$.toggleShape) { return; }
+            if ($$.cancelClick) {
+                $$.cancelClick = false;
+                return;
+            }
+            if ($$.isStepType(d) && config.line_step_type === 'step-after' && d3.mouse(shape)[0] < $$.x($$.getXValue(d.id, index))) {
+                index -= 1;
+            }
+            $$.main.selectAll('.' + CLASS.shape + '-' + index).each(function (d) {
+                if (config.data_selection_grouped || $$.isWithinShape(this, d)) {
+                    $$.toggleShape(this, d, index);
+                    $$.config.data_onclick.call($$.api, d, this);
+                }
+            });
+        }
+
         eventRectEnter.append("rect")
             .attr("class", $$.classEvent.bind($$))
             .style("cursor", config.data_selection_enabled && config.data_selection_grouped ? "pointer" : null)
@@ -2549,22 +2589,34 @@
                     });
             })
             .on('click', function (d) {
-                var index = d.index;
-                if ($$.hasArcType() || !$$.toggleShape) { return; }
-                if ($$.cancelClick) {
-                    $$.cancelClick = false;
+                //click event was simulated via a 'tap' touch event, cancel regular click
+                if (tap) {
                     return;
                 }
-                if ($$.isStepType(d) && config.line_step_type === 'step-after' && d3.mouse(this)[0] < $$.x($$.getXValue(d.id, index))) {
-                    index -= 1;
-                }
-                $$.main.selectAll('.' + CLASS.shape + '-' + index).each(function (d) {
-                    if (config.data_selection_grouped || $$.isWithinShape(this, d)) {
-                        $$.toggleShape(this, d, index);
-                        $$.config.data_onclick.call($$.api, d, this);
-                    }
-                });
+
+                click(this, d);
+
             })
+            .on('touchstart', function(d) {
+                //store current X selection for comparison during touch end event
+                tapX = d.x;
+            })
+            .on('touchend', function(d) {
+                var finalX = d.x;
+
+                //If end is not the same as the start, event doesn't count as a tap
+                if (tapX !== finalX) {
+                    return;
+                }
+                
+
+                click(this, d);
+
+                //indictate tap event fired to prevent click;
+                tap = true;
+                setTimeout(function() { tap = false; }, config.touch_tap_delay);
+            })
+
             .call(
                 config.data_selection_draggable && $$.drag ? (
                     d3.behavior.drag().origin(Object)
@@ -2576,7 +2628,8 @@
     };
 
     c3_chart_internal_fn.generateEventRectsForMultipleXs = function (eventRectEnter) {
-        var $$ = this, d3 = $$.d3, config = $$.config;
+        var $$ = this, d3 = $$.d3, config = $$.config,
+            tap = false, tapX, tapY;
 
         function mouseout() {
             $$.svg.select('.' + CLASS.eventRect).style('cursor', null);
@@ -2584,6 +2637,25 @@
             $$.hideTooltip();
             $$.unexpandCircles();
             $$.unexpandBars();
+        }
+
+        function click(shape) {
+            var targetsToShow = $$.filterTargetsToShow($$.data.targets);
+            var mouse, closest;
+            if ($$.hasArcType(targetsToShow)) { return; }
+
+            mouse = d3.mouse(shape);
+            closest = $$.findClosestFromTargets(targetsToShow, mouse);
+            if (! closest) { return; }
+            // select if selection enabled
+            if ($$.isBarType(closest.id) || $$.dist(closest, mouse) < config.point_sensitivity) {
+                $$.main.selectAll('.' + CLASS.shapes + $$.getTargetSelectorSuffix(closest.id)).selectAll('.' + CLASS.shape + '-' + closest.index).each(function () {
+                    if (config.data_selection_grouped || $$.isWithinShape(this, closest)) {
+                        $$.toggleShape(this, closest, closest.index);
+                        $$.config.data_onclick.call($$.api, closest, this);
+                    }
+                });
+            }
         }
 
         eventRectEnter.append('rect')
@@ -2648,22 +2720,35 @@
                 }
             })
             .on('click', function () {
-                var targetsToShow = $$.filterTargetsToShow($$.data.targets);
-                var mouse, closest;
-                if ($$.hasArcType(targetsToShow)) { return; }
-
-                mouse = d3.mouse(this);
-                closest = $$.findClosestFromTargets(targetsToShow, mouse);
-                if (! closest) { return; }
-                // select if selection enabled
-                if ($$.isBarType(closest.id) || $$.dist(closest, mouse) < config.point_sensitivity) {
-                    $$.main.selectAll('.' + CLASS.shapes + $$.getTargetSelectorSuffix(closest.id)).selectAll('.' + CLASS.shape + '-' + closest.index).each(function () {
-                        if (config.data_selection_grouped || $$.isWithinShape(this, closest)) {
-                            $$.toggleShape(this, closest, closest.index);
-                            $$.config.data_onclick.call($$.api, closest, this);
-                        }
-                    });
+                //click event was simulated via a 'tap' touch event, cancel regular click
+                if (tap) {
+                    return;
                 }
+
+                click(this);
+            })
+            .on('touchstart', function(){
+                var mouse = d3.mouse(this);
+                //store starting coordinates for distance comparision during touch end event
+                tapX = mouse[0];
+                tapY = mouse[1];
+
+            })
+            .on('touchend', function(){
+                var mouse = d3.mouse(this),
+                    x = mouse[0],
+                    y = mouse[1];
+
+                //If end is too far from start, event doesn't count as a tap
+                if (Math.abs(x - tapX) > config.touch_tap_radius || Math.abs(y - tapY) > config.touch_tap_radius) {
+                    return;
+                }
+
+                click(this);
+
+                //indictate tap event fired to prevent click;
+                tap = true;
+                setTimeout(function() { tap = false; }, config.touch_tap_delay);
             })
             .call(
                 config.data_selection_draggable && $$.drag ? (
@@ -3369,6 +3454,7 @@
             barX = $$.getShapeX(barW, barTargetsNum, barIndices, !!isSub),
             barY = $$.getShapeY(!!isSub),
             barOffset = $$.getShapeOffset($$.isBarType, barIndices, !!isSub),
+            barSpaceOffset = barW * ($$.config.bar_space / 2),
             yScale = isSub ? $$.getSubYScale : $$.getYScale;
         return function (d, i) {
             var y0 = yScale.call($$, d.id)(0),
@@ -3380,10 +3466,10 @@
             }
             // 4 points that make a bar
             return [
-                [posX, offset],
-                [posX, posY - (y0 - offset)],
-                [posX + barW, posY - (y0 - offset)],
-                [posX + barW, offset]
+                [posX + barSpaceOffset, offset],
+                [posX + barSpaceOffset, posY - (y0 - offset)],
+                [posX + barW - barSpaceOffset, posY - (y0 - offset)],
+                [posX + barW - barSpaceOffset, offset]
             ];
         };
     };
@@ -3883,56 +3969,168 @@
                 .style("display", "block");
         }
     };
-    c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+    c3_chart_internal_fn.getTooltipSortFunction = function() {
+        var $$ = this, config = $$.config;
+
+        if (config.data_groups.length === 0 || config.tooltip_order !== undefined) {
+            // if data are not grouped or if an order is specified
+            // for the tooltip values we sort them by their values
+
+            var order = config.tooltip_order;
+            if (order === undefined) {
+                order = config.data_order;
+            }
+
+            var valueOf = function(obj) {
+                return obj ? obj.value : null;
+            };
+
+            // if data are not grouped, we sort them by their value
+            if (isString(order) && order.toLowerCase() === 'asc') {
+                return function(a, b) {
+                    return valueOf(a) - valueOf(b);
+                };
+            } else if (isString(order) && order.toLowerCase() === 'desc') {
+                return function (a, b) {
+                    return valueOf(b) - valueOf(a);
+                };
+            } else if (isFunction(order)) {
+
+                // if the function is from data_order we need
+                // to wrap the returned function in order to format
+                // the sorted value to the expected format
+
+                var sortFunction = order;
+
+                if (config.tooltip_order === undefined) {
+                    sortFunction = function (a, b) {
+                        return order(a ? {
+                            id: a.id,
+                            values: [ a ]
+                        } : null, b ? {
+                            id: b.id,
+                            values: [ b ]
+                        } : null)
+                    };
+                }
+
+                return sortFunction;
+
+            } else if (isArray(order)) {
+                return function(a, b) {
+                    return order.indexOf(a.id) - order.indexOf(b.id);
+                }
+            }
+        } else {
+            // if data are grouped, we follow the order of grouped targets
+            var ids = $$.orderTargets($$.data.targets).map(function(i) {
+                return i.id;
+            });
+
+            // if it was either asc or desc we need to invert the order
+            // returned by orderTargets
+            if ($$.isOrderAsc() || $$.isOrderDesc()) {
+                ids = ids.reverse();
+            }
+
+            return function(a, b) {
+                return ids.indexOf(a.id) - ids.indexOf(b.id);
+            }
+        }
+    };
+
+    c3_chart_internal_fn.getTooltipDef = function (d, defaultTitleFormat, defaultValueFormat, color) {
         var $$ = this, config = $$.config,
             titleFormat = config.tooltip_format_title || defaultTitleFormat,
             nameFormat = config.tooltip_format_name || function (name) { return name; },
-            valueFormat = config.tooltip_format_value || defaultValueFormat,
-            text, i, title, value, name, bgcolor,
-            orderAsc = $$.isOrderAsc();
+            valueFormat = config.tooltip_format_value || defaultValueFormat;
 
-        if (config.data_groups.length === 0) {
-            d.sort(function(a, b){
-                var v1 = a ? a.value : null, v2 = b ? b.value : null;
-                return orderAsc ? v1 - v2 : v2 - v1;
-            });
-        } else {
-            var ids = $$.orderTargets($$.data.targets).map(function (i) {
-                return i.id;
-            });
-            d.sort(function(a, b) {
-                var v1 = a ? a.value : null, v2 = b ? b.value : null;
-                if (v1 > 0 && v2 > 0) {
-                    v1 = a ? ids.indexOf(a.id) : null;
-                    v2 = b ? ids.indexOf(b.id) : null;
+        var tooltipSortFunction = this.getTooltipSortFunction();
+        if (tooltipSortFunction) {
+            d.sort(tooltipSortFunction);
+        }
+
+        var def = {
+            data: d.reduce(function (acc, point) {
+                if (!point || point.name === null || !(point.value || point.value === 0)) {
+                    return acc;
                 }
-                return orderAsc ? v1 - v2 : v2 - v1;
-            });
+
+                var value = sanitise(valueFormat(point.value, point.ratio, point.id, point.index, point));
+                if (value === undefined) {
+                    return acc;
+                }
+
+                acc.push({
+                    d: point,
+                    cssClass: $$.CLASS.tooltipName + '-' + $$.getTargetSelectorSuffix(point.id),
+                    bgColor: $$.levelColor ? $$.levelColor(point.value) : color(point.id),
+                    value: value,
+                    name: sanitise(nameFormat(point.name, point.ratio, point.id, point.index))
+                });
+
+                return acc;
+            }, [])
+        };
+
+        if (def.data.length > 0) {
+            var x = def.data[0].d.x;
+            def.title = sanitise(titleFormat ? titleFormat(x) : x);
         }
 
-        for (i = 0; i < d.length; i++) {
-            if (! (d[i] && (d[i].value || d[i].value === 0))) { continue; }
-
-            if (! text) {
-                title = sanitise(titleFormat ? titleFormat(d[i].x) : d[i].x);
-                text = "<table class='" + $$.CLASS.tooltip + "'>" + (title || title === 0 ? "<tr><th colspan='2'>" + title + "</th></tr>" : "");
-            }
-
-            value = sanitise(valueFormat(d[i].value, d[i].ratio, d[i].id, d[i].index, d));
-            if (value !== undefined) {
-                // Skip elements when their name is set to null
-                if (d[i].name === null) { continue; }
-                name = sanitise(nameFormat(d[i].name, d[i].ratio, d[i].id, d[i].index));
-                bgcolor = $$.levelColor ? $$.levelColor(d[i].value) : color(d[i].id);
-
-                text += "<tr class='" + $$.CLASS.tooltipName + "-" + $$.getTargetSelectorSuffix(d[i].id) + "'>";
-                text += "<td class='name'><span style='background-color:" + bgcolor + "'></span>" + name + "</td>";
-                text += "<td class='value'>" + value + "</td>";
-                text += "</tr>";
-            }
-        }
-        return text + "</table>";
+        return def;
     };
+
+    c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+        var $$ = this,
+            config = $$.config,
+            def = $$.getTooltipDef(d, defaultTitleFormat, defaultValueFormat, color);
+
+        var drawRow = function(row) {
+            return '<tr class="' + row.cssClass + '">' +
+                        '<td class="name">' +
+                            '<span style="background-color:' + row.bgColor + ';"></span> ' +
+                            row.name +
+                        '</td>' +
+                        '<td class="value">' +
+                            row.value +
+                        '</td>' +
+                    '</tr>';
+        };
+
+        var colspan;
+        var html = '';
+        if (config.tooltip_columns_enabled) {
+            var columnsSize = Math.ceil(def.data.length / Math.ceil(def.data.length / config.tooltip_columns_maxSize));
+
+            colspan = Math.ceil(def.data.length / columnsSize);
+
+            html += '<tr style="border:none;">';
+            def.data.map(function(item, index) {
+                return index % columnsSize === 0 ? def.data.slice(index, index + columnsSize) : null;
+            }).filter(function(item) {
+                return item;
+            }).forEach(function(column) {
+                html += '<td style="vertical-align:top;padding:0;border:none;background:none;"><table>';
+                for (var i = 0; i < column.length; i++) {
+                    html += drawRow(column[i]);
+                }
+                html += '</table></td>';
+            });
+            html += '</tr>';
+        } else {
+            colspan = 2;
+            html = def.data.reduce(function(html, row) {
+                return html + drawRow(row);
+            }, html);
+        }
+
+        return '<table class="' + $$.CLASS.tooltip + '">' +
+                ((def.title || def.title === 0) ? '<tr><th colspan="' + colspan + '">' + def.title + '</th></tr>' : '') +
+                html +
+                '</table>';
+    };
+
     c3_chart_internal_fn.tooltipPosition = function (dataToShow, tWidth, tHeight, element) {
         var $$ = this, config = $$.config, d3 = $$.d3;
         var svgLeft, tooltipLeft, tooltipRight, tooltipTop, chartRight;
@@ -4808,13 +5006,11 @@
     };
 
     c3_chart_internal_fn.initPie = function () {
-        var $$ = this, d3 = $$.d3, config = $$.config;
+        var $$ = this, d3 = $$.d3;
         $$.pie = d3.layout.pie().value(function (d) {
             return d.values.reduce(function (a, b) { return a + b.value; }, 0);
         });
-        if (!config.data_order) {
-            $$.pie.sort(null);
-        }
+        $$.pie.sort($$.getOrderFunction() || null);
     };
 
     c3_chart_internal_fn.updateRadius = function () {
@@ -6069,6 +6265,12 @@
         },
         isString = c3_chart_internal_fn.isString = function (o) {
             return typeof o === 'string';
+        },
+        isArray = c3_chart_internal_fn.isArray = function (o) {
+            if (Array.isArray) {
+                return Array.isArray(o);
+            }
+            return Object.prototype.toString.call(o) === '[object Array]';
         },
         isUndefined = c3_chart_internal_fn.isUndefined = function (v) {
             return typeof v === 'undefined';
