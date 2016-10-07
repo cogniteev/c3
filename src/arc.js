@@ -1,11 +1,9 @@
 c3_chart_internal_fn.initPie = function () {
-    var $$ = this, d3 = $$.d3, config = $$.config;
+    var $$ = this, d3 = $$.d3;
     $$.pie = d3.layout.pie().value(function (d) {
         return d.values.reduce(function (a, b) { return a + b.value; }, 0);
     });
-    if (!config.data_order) {
-        $$.pie.sort(null);
-    }
+    $$.pie.sort($$.getOrderFunction() || null);
 };
 
 c3_chart_internal_fn.updateRadius = function () {
