@@ -641,12 +641,19 @@ c3_axis_fn.textAnchorForY2AxisLabel = function textAnchorForY2AxisLabel() {
     var $$ = this.owner;
     return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
 };
-c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+c3_axis_fn.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
     var $$ = this.owner, config = $$.config,
-        maxWidth = 0, targetsToShow, scale, axis, dummy, svg;
-    if (withoutRecompute && $$.currentMaxTickWidths[id]) {
-        return $$.currentMaxTickWidths[id];
+        targetsToShow, scale, axis, dummy, svg;
+
+    if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
+        return $$.currentMaxTickBoxes[id];
     }
+
+    var maxBox = {
+        height: 0,
+        width: 0
+    };
+
     if ($$.svg) {
         targetsToShow = $$.filterTargetsToShow($$.data.targets);
         if (id === 'y') {
@@ -660,18 +667,29 @@ c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
             axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
             this.updateXAxisTickValues(targetsToShow, axis);
         }
+
         dummy = $$.d3.select('body').append('div').classed('c3', true);
-        svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0),
+        svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0);
         svg.append('g').call(axis).each(function () {
             $$.d3.select(this).selectAll('text').each(function () {
                 var box = this.getBoundingClientRect();
-                if (maxWidth < box.width) { maxWidth = box.width; }
+                maxBox.width = Math.max(maxBox.width, box.width);
+                maxBox.height = Math.max(maxBox.height, box.height);
             });
-            dummy.remove();
         });
+        dummy.remove();
     }
-    $$.currentMaxTickWidths[id] = maxWidth <= 0 ? $$.currentMaxTickWidths[id] : maxWidth;
-    return $$.currentMaxTickWidths[id];
+
+    $$.currentMaxTickBoxes[id] = maxBox;
+    return $$.currentMaxTickBoxes[id];
+};
+
+c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).width;
+};
+
+c3_axis_fn.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).height;
 };
 
 c3_axis_fn.updateLabels = function updateLabels(withTransition) {

@@ -104,8 +104,12 @@ c3_chart_internal_fn.getHorizontalAxisHeight = function (axisId) {
     }
     if (axisId === 'y2' && !config.axis_y2_show) { return $$.rotated_padding_top; }
     // Calculate x axis height when tick rotated
-    if (axisId === 'x' && !config.axis_rotated && config.axis_x_tick_rotate) {
-        h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+    if (axisId === 'x' && !config.axis_rotated) {
+        if (config.axis_x_tick_rotate) {
+            h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+        } else {
+            h = 30 + $$.axis.getMaxTickHeight(axisId);
+        }
     }
     // Calculate y axis height when tick rotated
     if (axisId === 'y' && config.axis_rotated && config.axis_y_tick_rotate) {
