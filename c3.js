@@ -158,11 +158,7 @@
         $$.legendItemWidth = 0;
         $$.legendItemHeight = 0;
 
-        $$.currentMaxTickWidths = {
-            x: 0,
-            y: 0,
-            y2: 0
-        };
+        $$.currentMaxTickBoxes = {};
 
         $$.rotated_padding_left = 30;
         $$.rotated_padding_right = config.axis_rotated && !config.axis_x_show ? 0 : 30;
@@ -2780,7 +2776,7 @@
     c3_chart_internal_fn.getCurrentHeight = function () {
         var $$ = this, config = $$.config,
             h = config.size_height ? config.size_height : $$.getParentHeight();
-        return h > 0 ? h : 320 / ($$.hasType('gauge') && !config.gauge_fullCircle ? 2 : 1); 
+        return h > 0 ? h : 320 / ($$.hasType('gauge') && !config.gauge_fullCircle ? 2 : 1);
     };
     c3_chart_internal_fn.getCurrentPaddingTop = function () {
         var $$ = this,
@@ -2870,13 +2866,17 @@
         var $$ = this, config = $$.config, h = 30;
         if (axisId === 'x' && !config.axis_x_show) { return 8; }
         if (axisId === 'x' && config.axis_x_height) { return config.axis_x_height; }
-        if (axisId === 'y' && !config.axis_y_show) { 
-            return config.legend_show && !$$.isLegendRight && !$$.isLegendInset ? 10 : 1; 
+        if (axisId === 'y' && !config.axis_y_show) {
+            return config.legend_show && !$$.isLegendRight && !$$.isLegendInset ? 10 : 1;
         }
         if (axisId === 'y2' && !config.axis_y2_show) { return $$.rotated_padding_top; }
         // Calculate x axis height when tick rotated
-        if (axisId === 'x' && !config.axis_rotated && config.axis_x_tick_rotate) {
-            h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+        if (axisId === 'x' && !config.axis_rotated) {
+            if (config.axis_x_tick_rotate) {
+                h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+            } else {
+                h = 30 + $$.axis.getMaxTickHeight(axisId);
+            }
         }
         // Calculate y axis height when tick rotated
         if (axisId === 'y' && config.axis_rotated && config.axis_y_tick_rotate) {
@@ -4796,7 +4796,7 @@
         if (config.axis_rotated) {
             return position.isInner ? "1.2em" : -25 - this.getMaxTickWidth('x');
         } else {
-            return position.isInner ? "-0.5em" : config.axis_x_height ? config.axis_x_height - 10 : "3em";
+            return position.isInner ? "-0.5em" : $$.getHorizontalAxisHeight('x') - 10;
         }
     };
     Axis.prototype.dyForYAxisLabel = function dyForYAxisLabel() {
@@ -4829,12 +4829,20 @@
         var $$ = this.owner;
         return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
     };
-    Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+
+    Axis.prototype.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
         var $$ = this.owner, config = $$.config,
-            maxWidth = 0, targetsToShow, scale, axis, dummy, svg;
-        if (withoutRecompute && $$.currentMaxTickWidths[id]) {
-            return $$.currentMaxTickWidths[id];
+            targetsToShow, scale, axis, dummy, svg;
+
+        if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
+            return $$.currentMaxTickBoxes[id];
         }
+
+        var maxBox = {
+            height: 0,
+            width: 0
+        };
+
         if ($$.svg) {
             targetsToShow = $$.filterTargetsToShow($$.data.targets);
             if (id === 'y') {
@@ -4848,18 +4856,29 @@
                 axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
                 this.updateXAxisTickValues(targetsToShow, axis);
             }
+
             dummy = $$.d3.select('body').append('div').classed('c3', true);
-            svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0),
+            svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0);
             svg.append('g').call(axis).each(function () {
                 $$.d3.select(this).selectAll('text').each(function () {
                     var box = this.getBoundingClientRect();
-                    if (maxWidth < box.width) { maxWidth = box.width; }
+                    maxBox.width = Math.max(maxBox.width, box.width);
+                    maxBox.height = Math.max(maxBox.height, box.height);
                 });
-                dummy.remove();
             });
+            dummy.remove();
         }
-        $$.currentMaxTickWidths[id] = maxWidth <= 0 ? $$.currentMaxTickWidths[id] : maxWidth;
-        return $$.currentMaxTickWidths[id];
+
+        $$.currentMaxTickBoxes[id] = maxBox;
+        return $$.currentMaxTickBoxes[id];
+    };
+
+    Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+        return this.getMaxTickBox(id, withoutRecompute).width;
+    };
+
+    Axis.prototype.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
+        return this.getMaxTickBox(id, withoutRecompute).height;
     };
 
     Axis.prototype.updateLabels = function updateLabels(withTransition) {
