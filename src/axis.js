@@ -608,7 +608,7 @@ c3_axis_fn.dyForXAxisLabel = function dyForXAxisLabel() {
     if (config.axis_rotated) {
         return position.isInner ? "1.2em" : -25 - this.getMaxTickWidth('x');
     } else {
-        return position.isInner ? "-0.5em" : config.axis_x_height ? config.axis_x_height - 10 : "3em";
+        return position.isInner ? "-0.5em" : $$.getHorizontalAxisHeight('x') - 10;
     }
 };
 c3_axis_fn.dyForYAxisLabel = function dyForYAxisLabel() {
