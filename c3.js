@@ -1,4 +1,4 @@
-/* @license C3.js v0.4.21 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.4.21-cogniteev | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -846,7 +846,7 @@ c3_axis_fn.dyForXAxisLabel = function dyForXAxisLabel() {
     if (config.axis_rotated) {
         return position.isInner ? "1.2em" : -25 - this.getMaxTickWidth('x');
     } else {
-        return position.isInner ? "-0.5em" : config.axis_x_height ? config.axis_x_height - 10 : "3em";
+        return position.isInner ? "-0.5em" : $$.getHorizontalAxisHeight('x') - 10;
     }
 };
 c3_axis_fn.dyForYAxisLabel = function dyForYAxisLabel() {
@@ -879,18 +879,24 @@ c3_axis_fn.textAnchorForY2AxisLabel = function textAnchorForY2AxisLabel() {
     var $$ = this.owner;
     return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
 };
-c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+c3_axis_fn.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
     var $$ = this.owner,
         config = $$.config,
-        maxWidth = 0,
         targetsToShow,
         scale,
         axis,
         dummy,
         svg;
-    if (withoutRecompute && $$.currentMaxTickWidths[id]) {
-        return $$.currentMaxTickWidths[id];
+
+    if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
+        return $$.currentMaxTickBoxes[id];
     }
+
+    var maxBox = {
+        height: 0,
+        width: 0
+    };
+
     if ($$.svg) {
         targetsToShow = $$.filterTargetsToShow($$.data.targets);
         if (id === 'y') {
@@ -904,19 +910,29 @@ c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
             axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
             this.updateXAxisTickValues(targetsToShow, axis);
         }
+
         dummy = $$.d3.select('body').append('div').classed('c3', true);
-        svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0), svg.append('g').call(axis).each(function () {
+        svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0);
+        svg.append('g').call(axis).each(function () {
             $$.d3.select(this).selectAll('text').each(function () {
                 var box = this.getBoundingClientRect();
-                if (maxWidth < box.width) {
-                    maxWidth = box.width;
-                }
+                maxBox.width = Math.max(maxBox.width, box.width);
+                maxBox.height = Math.max(maxBox.height, box.height);
             });
-            dummy.remove();
         });
+        dummy.remove();
     }
-    $$.currentMaxTickWidths[id] = maxWidth <= 0 ? $$.currentMaxTickWidths[id] : maxWidth;
-    return $$.currentMaxTickWidths[id];
+
+    $$.currentMaxTickBoxes[id] = maxBox;
+    return $$.currentMaxTickBoxes[id];
+};
+
+c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).width;
+};
+
+c3_axis_fn.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).height;
 };
 
 c3_axis_fn.updateLabels = function updateLabels(withTransition) {
@@ -1135,11 +1151,7 @@ c3_chart_internal_fn.initParams = function () {
     $$.legendItemWidth = 0;
     $$.legendItemHeight = 0;
 
-    $$.currentMaxTickWidths = {
-        x: 0,
-        y: 0,
-        y2: 0
-    };
+    $$.currentMaxTickBoxes = {};
 
     $$.rotated_padding_left = 30;
     $$.rotated_padding_right = config.axis_rotated && !config.axis_x_show ? 0 : 30;
@@ -5204,6 +5216,7 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         axis_x_label: {},
         axis_y_show: true,
         axis_y_type: undefined,
+        axis_y_scale: undefined,
         axis_y_max: undefined,
         axis_y_min: undefined,
         axis_y_inverted: false,
@@ -5219,6 +5232,7 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         axis_y_tick_time_interval: undefined,
         axis_y_padding: {},
         axis_y_default: undefined,
+        axis_y2_scale: undefined,
         axis_y2_show: false,
         axis_y2_max: undefined,
         axis_y2_min: undefined,
@@ -5300,6 +5314,8 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         tooltip_show: true,
         tooltip_grouped: true,
         tooltip_order: undefined,
+        tooltip_columns_enabled: false,
+        tooltip_columns_maxSize: 10,
         tooltip_format_title: undefined,
         tooltip_format_name: undefined,
         tooltip_format_value: undefined,
@@ -7701,11 +7717,105 @@ c3_chart_internal_fn.getX = function (min, max, domain, offset) {
     }
     return scale;
 };
-c3_chart_internal_fn.getY = function (min, max, domain) {
-    var scale = this.getScale(min, max, this.isTimeSeriesY());
+
+function c3LogScale(d3, linearScale, logScale) {
+    var PROJECTION = [.01, 10];
+
+    if (!linearScale) {
+        linearScale = d3.scale.linear();
+        linearScale.range(PROJECTION);
+    }
+
+    if (!logScale) {
+        logScale = d3.scale.log();
+        logScale.domain(PROJECTION);
+        logScale.nice();
+    }
+
+    // copied from https://github.com/compute-io/logspace
+    function logspace(a, b, len) {
+        var arr, end, tmp, d;
+
+        if (arguments.length < 3) {
+            len = 10;
+        } else {
+            if (len === 0) {
+                return [];
+            }
+        }
+        // Calculate the increment:
+        end = len - 1;
+        d = (b - a) / end;
+
+        // Build the output array...
+        arr = new Array(len);
+        tmp = a;
+        arr[0] = Math.pow(10, tmp);
+        for (var i = 1; i < end; i++) {
+            tmp += d;
+            arr[i] = Math.pow(10, tmp);
+        }
+        arr[end] = Math.pow(10, b);
+        return arr;
+    }
+
+    function scale(x) {
+        return logScale(linearScale(x));
+    }
+
+    scale.domain = function (x) {
+        if (!arguments.length) {
+            return linearScale.domain();
+        }
+        linearScale.domain(x);
+        return scale;
+    };
+
+    scale.range = function (x) {
+        if (!arguments.length) {
+            return logScale.range();
+        }
+        logScale.range(x);
+        return scale;
+    };
+
+    scale.ticks = function (m) {
+        return logspace(-2, 1, m || 10).map(function (v) {
+            return linearScale.invert(v);
+        });
+    };
+
+    scale.copy = function () {
+        return c3LogScale(d3, linearScale.copy(), logScale.copy());
+    };
+
+    return scale;
+}
+
+c3_chart_internal_fn.getY = function (type, scaleConfig, range, domain) {
+    if (!scaleConfig) {
+        scaleConfig = {};
+    }
+
+    var name = type === 'timeseries' ? 'time' : scaleConfig.name;
+
+    var scale;
+    if (name === 'time') {
+        scale = this.d3.time.scale();
+    } else if (name === 'log') {
+        scale = c3LogScale(this.d3);
+    } else {
+        scale = this.d3.scale.linear();
+    }
+
     if (domain) {
         scale.domain(domain);
     }
+
+    if (range) {
+        scale.range(range);
+    }
+
     return scale;
 };
 c3_chart_internal_fn.getYScale = function (id) {
@@ -7731,13 +7841,13 @@ c3_chart_internal_fn.updateScales = function () {
     $$.x = $$.getX($$.xMin, $$.xMax, forInit ? undefined : $$.x.orgDomain(), function () {
         return $$.xAxis.tickOffset();
     });
-    $$.y = $$.getY($$.yMin, $$.yMax, forInit ? config.axis_y_default : $$.y.domain());
-    $$.y2 = $$.getY($$.yMin, $$.yMax, forInit ? config.axis_y2_default : $$.y2.domain());
+    $$.y = $$.getY(config.axis_y_type, config.axis_y_scale, [$$.yMin, $$.yMax], forInit ? config.axis_y_default : $$.y.domain());
+    $$.y2 = $$.getY(null, config.axis_y2_scale, [$$.yMin, $$.yMax], forInit ? config.axis_y2_default : $$.y2.domain());
     $$.subX = $$.getX($$.xMin, $$.xMax, $$.orgXDomain, function (d) {
         return d % 1 ? 0 : $$.subXAxis.tickOffset();
     });
-    $$.subY = $$.getY($$.subYMin, $$.subYMax, forInit ? config.axis_y_default : $$.subY.domain());
-    $$.subY2 = $$.getY($$.subYMin, $$.subYMax, forInit ? config.axis_y2_default : $$.subY2.domain());
+    $$.subY = $$.getY(config.axis_y_type, config.axis_y_scale, [$$.subYMin, $$.subYMax], forInit ? config.axis_y_default : $$.subY.domain());
+    $$.subY2 = $$.getY(null, config.axis_y2_scale, [$$.subYMin, $$.subYMax], forInit ? config.axis_y2_default : $$.subY2.domain());
     // update axes
     $$.xAxisTickFormat = $$.axis.getXAxisTickFormat();
     $$.xAxisTickValues = $$.axis.getXAxisTickValues();
@@ -8586,8 +8696,12 @@ c3_chart_internal_fn.getHorizontalAxisHeight = function (axisId) {
         return $$.rotated_padding_top;
     }
     // Calculate x axis height when tick rotated
-    if (axisId === 'x' && !config.axis_rotated && config.axis_x_tick_rotate) {
-        h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+    if (axisId === 'x' && !config.axis_rotated) {
+        if (config.axis_x_tick_rotate) {
+            h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+        } else {
+            h = 30 + $$.axis.getMaxTickHeight(axisId);
+        }
     }
     // Calculate y axis height when tick rotated
     if (axisId === 'y' && config.axis_rotated && config.axis_y_tick_rotate) {
@@ -9013,53 +9127,91 @@ c3_chart_internal_fn.getTooltipSortFunction = function () {
         };
     }
 };
-c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+
+c3_chart_internal_fn.getTooltipDef = function (d, defaultTitleFormat, defaultValueFormat, color) {
     var $$ = this,
         config = $$.config,
         titleFormat = config.tooltip_format_title || defaultTitleFormat,
         nameFormat = config.tooltip_format_name || function (name) {
         return name;
     },
-        valueFormat = config.tooltip_format_value || defaultValueFormat,
-        text,
-        i,
-        title,
-        value,
-        name,
-        bgcolor;
+        valueFormat = config.tooltip_format_value || defaultValueFormat;
 
     var tooltipSortFunction = this.getTooltipSortFunction();
     if (tooltipSortFunction) {
         d.sort(tooltipSortFunction);
     }
 
-    for (i = 0; i < d.length; i++) {
-        if (!(d[i] && (d[i].value || d[i].value === 0))) {
-            continue;
-        }
-
-        if (!text) {
-            title = sanitise(titleFormat ? titleFormat(d[i].x) : d[i].x);
-            text = "<table class='" + $$.CLASS.tooltip + "'>" + (title || title === 0 ? "<tr><th colspan='2'>" + title + "</th></tr>" : "");
-        }
-
-        value = sanitise(valueFormat(d[i].value, d[i].ratio, d[i].id, d[i].index, d));
-        if (value !== undefined) {
-            // Skip elements when their name is set to null
-            if (d[i].name === null) {
-                continue;
+    var def = {
+        data: d.reduce(function (acc, point) {
+            if (!point || point.name === null || !(point.value || point.value === 0)) {
+                return acc;
             }
-            name = sanitise(nameFormat(d[i].name, d[i].ratio, d[i].id, d[i].index));
-            bgcolor = $$.levelColor ? $$.levelColor(d[i].value) : color(d[i].id);
 
-            text += "<tr class='" + $$.CLASS.tooltipName + "-" + $$.getTargetSelectorSuffix(d[i].id) + "'>";
-            text += "<td class='name'><span style='background-color:" + bgcolor + "'></span>" + name + "</td>";
-            text += "<td class='value'>" + value + "</td>";
-            text += "</tr>";
-        }
+            var value = sanitise(valueFormat(point.value, point.ratio, point.id, point.index, point));
+            if (value === undefined) {
+                return acc;
+            }
+
+            acc.push({
+                d: point,
+                cssClass: $$.CLASS.tooltipName + '-' + $$.getTargetSelectorSuffix(point.id),
+                bgColor: $$.levelColor ? $$.levelColor(point.value) : color(point.id),
+                value: value,
+                name: sanitise(nameFormat(point.name, point.ratio, point.id, point.index))
+            });
+
+            return acc;
+        }, [])
+    };
+
+    if (def.data.length > 0) {
+        var x = def.data[0].d.x;
+        def.title = sanitise(titleFormat ? titleFormat(x) : x);
     }
-    return text + "</table>";
+
+    return def;
 };
+
+c3_chart_internal_fn.getTooltipContent = function (d, defaultTitleFormat, defaultValueFormat, color) {
+    var $$ = this,
+        config = $$.config,
+        def = $$.getTooltipDef(d, defaultTitleFormat, defaultValueFormat, color);
+
+    var drawRow = function drawRow(row) {
+        return '<tr class="' + row.cssClass + '">' + '<td class="name">' + '<span style="background-color:' + row.bgColor + ';"></span> ' + row.name + '</td>' + '<td class="value">' + row.value + '</td>' + '</tr>';
+    };
+
+    var colspan;
+    var html = '';
+    if (config.tooltip_columns_enabled) {
+        var columnsSize = Math.ceil(def.data.length / Math.ceil(def.data.length / config.tooltip_columns_maxSize));
+
+        colspan = Math.ceil(def.data.length / columnsSize);
+
+        html += '<tr style="border:none;">';
+        def.data.map(function (item, index) {
+            return index % columnsSize === 0 ? def.data.slice(index, index + columnsSize) : null;
+        }).filter(function (item) {
+            return item;
+        }).forEach(function (column) {
+            html += '<td style="vertical-align:top;padding:0;border:none;background:none;"><table>';
+            for (var i = 0; i < column.length; i++) {
+                html += drawRow(column[i]);
+            }
+            html += '</table></td>';
+        });
+        html += '</tr>';
+    } else {
+        colspan = 2;
+        html = def.data.reduce(function (html, row) {
+            return html + drawRow(row);
+        }, html);
+    }
+
+    return '<table class="' + $$.CLASS.tooltip + '">' + (def.title || def.title === 0 ? '<tr><th colspan="' + colspan + '">' + def.title + '</th></tr>' : '') + html + '</table>';
+};
+
 c3_chart_internal_fn.tooltipPosition = function (dataToShow, tWidth, tHeight, element) {
     var $$ = this,
         config = $$.config,
