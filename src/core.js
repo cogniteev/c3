@@ -151,6 +151,11 @@ c3_chart_internal_fn.initParams = function () {
     $$.axes.subx = d3.selectAll([]); // needs when excluding subchart.js
 };
 
+c3_chart_internal_fn.clearCachedSizes = function() {
+    var $$ = this;
+    $$.currentMaxTickBoxes = {};
+};
+
 c3_chart_internal_fn.initChartElements = function () {
     if (this.initBar) { this.initBar(); }
     if (this.initLine) { this.initLine(); }

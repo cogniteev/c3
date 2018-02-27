@@ -89,6 +89,8 @@ c3_chart_fn.flow = function (args) {
     }
     $$.data.targets = $$.data.targets.concat(targets); // add remained
 
+    $$.clearCachedSizes();
+
     // check data count because behavior needs to change when it's only one
     dataCount = $$.getMaxDataCount();
     baseTarget = $$.data.targets[0];

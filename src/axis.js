@@ -643,11 +643,10 @@ c3_axis_fn.textAnchorForY2AxisLabel = function textAnchorForY2AxisLabel() {
     var $$ = this.owner;
     return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
 };
-c3_axis_fn.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
-    var $$ = this.owner, config = $$.config,
-        targetsToShow, scale, axis, dummy, svg;
+c3_axis_fn.getMaxTickBox = function getMaxTickBox(id) {
+    var $$ = this.owner, config = $$.config, scale, axis, dummy, svg;
 
-    if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
+    if ($$.currentMaxTickBoxes[id]) {
         return $$.currentMaxTickBoxes[id];
     }
 
@@ -657,17 +656,16 @@ c3_axis_fn.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
     };
 
     if ($$.svg) {
-        targetsToShow = $$.filterTargetsToShow($$.data.targets);
         if (id === 'y') {
-            scale = $$.y.copy().domain($$.getYDomain(targetsToShow, 'y'));
+            scale = $$.y.copy().domain($$.getYDomain($$.data.targets, 'y'));
             axis = this.getYAxis(scale, $$.yOrient, config.axis_y_tick_format, $$.yAxisTickValues, false, true, true);
         } else if (id === 'y2') {
-            scale = $$.y2.copy().domain($$.getYDomain(targetsToShow, 'y2'));
+            scale = $$.y2.copy().domain($$.getYDomain($$.data.targets, 'y2'));
             axis = this.getYAxis(scale, $$.y2Orient, config.axis_y2_tick_format, $$.y2AxisTickValues, false, true, true);
         } else {
-            scale = $$.x.copy().domain($$.getXDomain(targetsToShow));
+            scale = $$.x.copy().domain($$.getXDomain($$.data.targets));
             axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
-            this.updateXAxisTickValues(targetsToShow, axis);
+            this.updateXAxisTickValues($$.data.targets, axis);
         }
 
         dummy = $$.d3.select('body').append('div').classed('c3', true);
@@ -680,18 +678,19 @@ c3_axis_fn.getMaxTickBox = function getMaxTickBox(id, withoutRecompute) {
             });
         });
         dummy.remove();
+
+        $$.currentMaxTickBoxes[id] = maxBox;
     }
 
-    $$.currentMaxTickBoxes[id] = maxBox;
-    return $$.currentMaxTickBoxes[id];
+    return maxBox;
 };
 
-c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
-    return this.getMaxTickBox(id, withoutRecompute).width;
+c3_axis_fn.getMaxTickWidth = function getMaxTickWidth(id) {
+    return this.getMaxTickBox(id).width;
 };
 
-c3_axis_fn.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
-    return this.getMaxTickBox(id, withoutRecompute).height;
+c3_axis_fn.getMaxTickHeight = function getMaxTickHeight(id) {
+    return this.getMaxTickBox(id).height;
 };
 
 c3_axis_fn.updateLabels = function updateLabels(withTransition) {

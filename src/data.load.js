@@ -26,6 +26,7 @@ c3_chart_internal_fn.load = function (targets, args) {
             }
         });
         $$.data.targets = $$.data.targets.concat(targets); // add remained
+        $$.clearCachedSizes();
     }
 
     // Set targets
