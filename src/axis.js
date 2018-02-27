@@ -319,7 +319,7 @@ c3_axis_internal_fn.generateAxis = function () {
     };
     axis.tickFormat = function (format) {
         if (!arguments.length) { return internal.tickFormat; }
-        internal.tickFormat = format;
+        internal.tickFormat = format || ((v) => String(v));
         return axis;
     };
     axis.tickCentered = function (isCentered) {
