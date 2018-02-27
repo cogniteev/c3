@@ -1,4 +1,4 @@
-/* @license C3.js v0.4.22-cogniteev | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.4.23-cogniteev | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -1010,7 +1010,7 @@ c3_axis_fn.generateTransitions = function generateTransitions(duration) {
     return {
         axisX: duration ? axes.x.transition().duration(duration) : axes.x,
         axisY: duration ? axes.y.transition().duration(duration) : axes.y,
-        axisY2: duration ? axes.y2.transition().duration(duration) : axes.y2,
+        axisY2: axes.y2 ? duration ? axes.y2.transition().duration(duration) : axes.y2 : null,
         axisSubX: axes.subx ? duration ? axes.subx.transition().duration(duration) : axes.subx : null
     };
 };
