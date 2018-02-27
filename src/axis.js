@@ -763,7 +763,7 @@ c3_axis_fn.generateTransitions = function generateTransitions(duration) {
     return {
         axisX: duration ? axes.x.transition().duration(duration) : axes.x,
         axisY: duration ? axes.y.transition().duration(duration) : axes.y,
-        axisY2: duration ? axes.y2.transition().duration(duration) : axes.y2,
+        axisY2: axes.y2 ? (duration ? axes.y2.transition().duration(duration) : axes.y2) : null,
         axisSubX: axes.subx ? (duration ? axes.subx.transition().duration(duration) : axes.subx) : null
     };
 };
