@@ -1,6 +1,6 @@
 {
   "name": "c3",
-  "version": "0.4.21-cogniteev",
+  "version": "0.4.22-cogniteev",
   "description": "D3-based reusable chart library",
   "main": "c3.js",
   "scripts": {
