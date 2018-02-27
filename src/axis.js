@@ -448,7 +448,9 @@ c3_axis_fn.updateXAxisTickValues = function updateXAxisTickValues(targets, axis)
         axis.tickValues(tickValues);
     } else {
         $$.xAxis.tickValues(tickValues);
-        $$.subXAxis.tickValues(tickValues);
+        if ($$.subXAxis) {
+            $$.subXAxis.tickValues(tickValues);
+        }
     }
     return tickValues;
 };
@@ -761,7 +763,7 @@ c3_axis_fn.generateTransitions = function generateTransitions(duration) {
         axisX: duration ? axes.x.transition().duration(duration) : axes.x,
         axisY: duration ? axes.y.transition().duration(duration) : axes.y,
         axisY2: duration ? axes.y2.transition().duration(duration) : axes.y2,
-        axisSubX: duration ? axes.subx.transition().duration(duration) : axes.subx
+        axisSubX: axes.subx ? (duration ? axes.subx.transition().duration(duration) : axes.subx) : null
     };
 };
 c3_axis_fn.redraw = function redraw(transitions, isHidden) {
@@ -769,9 +771,13 @@ c3_axis_fn.redraw = function redraw(transitions, isHidden) {
     $$.axes.x.style("opacity", isHidden ? 0 : 1);
     $$.axes.y.style("opacity", isHidden ? 0 : 1);
     $$.axes.y2.style("opacity", isHidden ? 0 : 1);
-    $$.axes.subx.style("opacity", isHidden ? 0 : 1);
+    if ($$.axes.subx) {
+        $$.axes.subx.style("opacity", isHidden ? 0 : 1);
+    }
     transitions.axisX.call($$.xAxis);
     transitions.axisY.call($$.yAxis);
     transitions.axisY2.call($$.y2Axis);
-    transitions.axisSubX.call($$.subXAxis);
+    if ($$.subXAxis) {
+        transitions.axisSubX.call($$.subXAxis);
+    }
 };

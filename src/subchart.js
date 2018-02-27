@@ -15,10 +15,9 @@ c3_chart_internal_fn.initBrush = function () {
 };
 c3_chart_internal_fn.initSubchart = function () {
     var $$ = this, config = $$.config,
-        context = $$.context = $$.svg.append("g").attr("transform", $$.getTranslate('context')),
-        visibility = config.subchart_show ? 'visible' : 'hidden';
+        context = $$.context = $$.svg.append("g").attr("transform", $$.getTranslate('context'));
 
-    context.style('visibility', visibility);
+    context.style('visibility', 'visible');
 
     // Define g for chart area
     context.append('g')
@@ -45,7 +44,7 @@ c3_chart_internal_fn.initSubchart = function () {
         .attr("class", CLASS.axisX)
         .attr("transform", $$.getTranslate('subx'))
         .attr("clip-path", config.axis_rotated ? "" : $$.clipPathForXAxis)
-        .style("visibility", config.subchart_axis_x_show ? visibility : 'hidden');
+        .style("visibility", config.subchart_axis_x_show ? 'visible' : 'hidden');
 };
 c3_chart_internal_fn.updateTargetsForSubchart = function (targets) {
     var $$ = this, context = $$.context, config = $$.config,
@@ -56,36 +55,34 @@ c3_chart_internal_fn.updateTargetsForSubchart = function (targets) {
         classLines = $$.classLines.bind($$),
         classAreas = $$.classAreas.bind($$);
 
-    if (config.subchart_show) {
-        //-- Bar --//
-        contextBarUpdate = context.select('.' + CLASS.chartBars).selectAll('.' + CLASS.chartBar)
-            .data(targets)
-            .attr('class', classChartBar);
-        contextBarEnter = contextBarUpdate.enter().append('g')
-            .style('opacity', 0)
-            .attr('class', classChartBar);
-        // Bars for each data
-        contextBarEnter.append('g')
-            .attr("class", classBars);
+    //-- Bar --//
+    contextBarUpdate = context.select('.' + CLASS.chartBars).selectAll('.' + CLASS.chartBar)
+        .data(targets)
+        .attr('class', classChartBar);
+    contextBarEnter = contextBarUpdate.enter().append('g')
+        .style('opacity', 0)
+        .attr('class', classChartBar);
+    // Bars for each data
+    contextBarEnter.append('g')
+        .attr("class", classBars);
 
-        //-- Line --//
-        contextLineUpdate = context.select('.' + CLASS.chartLines).selectAll('.' + CLASS.chartLine)
-            .data(targets)
-            .attr('class', classChartLine);
-        contextLineEnter = contextLineUpdate.enter().append('g')
-            .style('opacity', 0)
-            .attr('class', classChartLine);
-        // Lines for each data
-        contextLineEnter.append("g")
-            .attr("class", classLines);
-        // Area
-        contextLineEnter.append("g")
-            .attr("class", classAreas);
+    //-- Line --//
+    contextLineUpdate = context.select('.' + CLASS.chartLines).selectAll('.' + CLASS.chartLine)
+        .data(targets)
+        .attr('class', classChartLine);
+    contextLineEnter = contextLineUpdate.enter().append('g')
+        .style('opacity', 0)
+        .attr('class', classChartLine);
+    // Lines for each data
+    contextLineEnter.append("g")
+        .attr("class", classLines);
+    // Area
+    contextLineEnter.append("g")
+        .attr("class", classAreas);
 
-        //-- Brush --//
-        context.selectAll('.' + CLASS.brush + ' rect')
-            .attr(config.axis_rotated ? "width" : "height", config.axis_rotated ? $$.width2 : $$.height2);
-    }
+    //-- Brush --//
+    context.selectAll('.' + CLASS.brush + ' rect')
+        .attr(config.axis_rotated ? "width" : "height", config.axis_rotated ? $$.width2 : $$.height2);
 };
 c3_chart_internal_fn.updateBarForSubchart = function (durationForExit) {
     var $$ = this;
@@ -148,34 +145,29 @@ c3_chart_internal_fn.redrawSubchart = function (withSubchart, transitions, durat
     var $$ = this, d3 = $$.d3, config = $$.config,
         drawAreaOnSub, drawBarOnSub, drawLineOnSub;
 
-    $$.context.style('visibility', config.subchart_show ? 'visible' : 'hidden');
+    // reflect main chart to extent on subchart if zoomed
+    if (d3.event && d3.event.type === 'zoom') {
+        $$.brush.extent($$.x.orgDomain()).update();
+    }
+    // update subchart elements if needed
+    if (withSubchart) {
 
-    // subchart
-    if (config.subchart_show) {
-        // reflect main chart to extent on subchart if zoomed
-        if (d3.event && d3.event.type === 'zoom') {
+        // extent rect
+        if (!$$.brush.empty()) {
             $$.brush.extent($$.x.orgDomain()).update();
         }
-        // update subchart elements if needed
-        if (withSubchart) {
+        // setup drawer - MEMO: this must be called after axis updated
+        drawAreaOnSub = $$.generateDrawArea(areaIndices, true);
+        drawBarOnSub = $$.generateDrawBar(barIndices, true);
+        drawLineOnSub = $$.generateDrawLine(lineIndices, true);
 
-            // extent rect
-            if (!$$.brush.empty()) {
-                $$.brush.extent($$.x.orgDomain()).update();
-            }
-            // setup drawer - MEMO: this must be called after axis updated
-            drawAreaOnSub = $$.generateDrawArea(areaIndices, true);
-            drawBarOnSub = $$.generateDrawBar(barIndices, true);
-            drawLineOnSub = $$.generateDrawLine(lineIndices, true);
+        $$.updateBarForSubchart(duration);
+        $$.updateLineForSubchart(duration);
+        $$.updateAreaForSubchart(duration);
 
-            $$.updateBarForSubchart(duration);
-            $$.updateLineForSubchart(duration);
-            $$.updateAreaForSubchart(duration);
-
-            $$.redrawBarForSubchart(drawBarOnSub, duration, duration);
-            $$.redrawLineForSubchart(drawLineOnSub, duration, duration);
-            $$.redrawAreaForSubchart(drawAreaOnSub, duration, duration);
-        }
+        $$.redrawBarForSubchart(drawBarOnSub, duration, duration);
+        $$.redrawLineForSubchart(drawLineOnSub, duration, duration);
+        $$.redrawAreaForSubchart(drawAreaOnSub, duration, duration);
     }
 };
 c3_chart_internal_fn.redrawForBrush = function () {

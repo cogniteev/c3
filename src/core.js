@@ -209,15 +209,22 @@ c3_chart_internal_fn.initWithData = function (data) {
     $$.x.domain(d3.extent($$.getXDomain($$.data.targets)));
     $$.y.domain($$.getYDomain($$.data.targets, 'y'));
     $$.y2.domain($$.getYDomain($$.data.targets, 'y2'));
-    $$.subX.domain($$.x.domain());
-    $$.subY.domain($$.y.domain());
-    $$.subY2.domain($$.y2.domain());
+
+    if ($$.subX) {
+        $$.subX.domain($$.x.domain());
+    }
+    if ($$.subY) {
+        $$.subY.domain($$.y.domain());
+    }
+    if ($$.subY2) {
+        $$.subY2.domain($$.y2.domain());
+    }
 
     // Save original x domain for zoom update
     $$.orgXDomain = $$.x.domain();
 
     // Set initialized scales to brush and zoom
-    if ($$.brush) { $$.brush.scale($$.subX); }
+    if ($$.brush && $$.subX) { $$.brush.scale($$.subX); }
     if (config.zoom_enabled) { $$.zoom.scale($$.x); }
 
     /*-- Basic Elements --*/
@@ -238,13 +245,15 @@ c3_chart_internal_fn.initWithData = function (data) {
     $$.clipXAxis = $$.appendClip(defs, $$.clipIdForXAxis);
     $$.clipYAxis = $$.appendClip(defs, $$.clipIdForYAxis);
     $$.clipGrid = $$.appendClip(defs, $$.clipIdForGrid);
-    $$.clipSubchart = $$.appendClip(defs, $$.clipIdForSubchart);
+    if (config.subchart_show) {
+        $$.clipSubchart = $$.appendClip(defs, $$.clipIdForSubchart);
+    }
     $$.updateSvgSize();
 
     // Define regions
     main = $$.main = $$.svg.append("g").attr("transform", $$.getTranslate('main'));
 
-    if ($$.initSubchart) { $$.initSubchart(); }
+    if ($$.initSubchart && config.subchart_show) { $$.initSubchart(); }
     if ($$.initTooltip) { $$.initTooltip(); }
     if ($$.initLegend) { $$.initLegend(); }
     if ($$.initTitle) { $$.initTitle(); }
@@ -424,7 +433,7 @@ c3_chart_internal_fn.updateTargets = function (targets) {
 
     /*-- Sub --*/
 
-    if ($$.updateTargetsForSubchart) { $$.updateTargetsForSubchart(targets); }
+    if ($$.updateTargetsForSubchart && $$.config.subchart_show) { $$.updateTargetsForSubchart(targets); }
 
     // Fade-in each chart
     $$.showTargets();
@@ -491,7 +500,9 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
         }
     } else {
         $$.xAxis.tickValues([]);
-        $$.subXAxis.tickValues([]);
+        if ($$.subXAxis) {
+            $$.subXAxis.tickValues([]);
+        }
     }
 
     if (config.zoom_rescale && !options.flow) {
@@ -543,8 +554,12 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
 
     // Update sub domain
     if (withY) {
-        $$.subY.domain($$.getYDomain(targetsToShow, 'y'));
-        $$.subY2.domain($$.getYDomain(targetsToShow, 'y2'));
+        if ($$.subY) {
+            $$.subY.domain($$.getYDomain(targetsToShow, 'y'));
+        }
+        if ($$.subY2) {
+            $$.subY2.domain($$.getYDomain(targetsToShow, 'y2'));
+        }
     }
 
     // xgrid focus
@@ -584,7 +599,7 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
     if ($$.redrawArc) { $$.redrawArc(duration, durationForExit, withTransform); }
 
     // subchart
-    if ($$.redrawSubchart) {
+    if ($$.redrawSubchart && config.subchart_show) {
         $$.redrawSubchart(withSubchart, transitions, duration, durationForExit, areaIndices, barIndices, lineIndices);
     }
 
@@ -859,7 +874,9 @@ c3_chart_internal_fn.updateDimension = function (withoutAxis) {
     if (!withoutAxis) {
         if ($$.config.axis_rotated) {
             $$.axes.x.call($$.xAxis);
-            $$.axes.subx.call($$.subXAxis);
+            if ($$.subXAxis) {
+                $$.axes.subx.call($$.subXAxis);
+            }
         } else {
             $$.axes.y.call($$.yAxis);
             $$.axes.y2.call($$.y2Axis);
