@@ -165,23 +165,31 @@ c3_chart_internal_fn.updateScales = function () {
     // update scales
     $$.x = $$.getX($$.xMin, $$.xMax, forInit ? undefined : $$.x.orgDomain(), function () { return $$.xAxis.tickOffset(); });
     $$.y = $$.getY(config.axis_y_type, config.axis_y_scale, [ $$.yMin, $$.yMax ], forInit ? config.axis_y_default : $$.y.domain());
-    $$.y2 = $$.getY(null, config.axis_y2_scale, [ $$.yMin, $$.yMax ], forInit ? config.axis_y2_default : $$.y2.domain());
+    if (config.axis_y2_show) {
+        $$.y2 = $$.getY(null, config.axis_y2_scale, [ $$.yMin, $$.yMax ], forInit ? config.axis_y2_default : $$.y2.domain());
+    }
 
     if (config.subchart_show) {
         $$.subX = $$.getX($$.xMin, $$.xMax, $$.orgXDomain, function (d) { return d % 1 ? 0 : $$.subXAxis.tickOffset(); });
         $$.subY = $$.getY(config.axis_y_type, config.axis_y_scale, [ $$.subYMin, $$.subYMax ], forInit ? config.axis_y_default : $$.subY.domain());
-        $$.subY2 = $$.getY(null, config.axis_y2_scale, [ $$.subYMin, $$.subYMax ], forInit ? config.axis_y2_default : $$.subY2.domain());
+        if (config.axis_y2_show) {
+            $$.subY2 = $$.getY(null, config.axis_y2_scale, [ $$.subYMin, $$.subYMax ], forInit ? config.axis_y2_default : $$.subY2.domain());
+        }
     }
 
     // update axes
     $$.xAxisTickFormat = $$.axis.getXAxisTickFormat();
     $$.xAxisTickValues = $$.axis.getXAxisTickValues();
     $$.yAxisTickValues = $$.axis.getYAxisTickValues();
-    $$.y2AxisTickValues = $$.axis.getY2AxisTickValues();
+    if (config.axis_y2_show) {
+        $$.y2AxisTickValues = $$.axis.getY2AxisTickValues();
+    }
 
     $$.xAxis = $$.axis.getXAxis($$.x, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, config.axis_x_tick_outer);
     $$.yAxis = $$.axis.getYAxis($$.y, $$.yOrient, config.axis_y_tick_format, $$.yAxisTickValues, config.axis_y_tick_outer);
-    $$.y2Axis = $$.axis.getYAxis($$.y2, $$.y2Orient, config.axis_y2_tick_format, $$.y2AxisTickValues, config.axis_y2_tick_outer);
+    if (config.axis_y2_show) {
+        $$.y2Axis = $$.axis.getYAxis($$.y2, $$.y2Orient, config.axis_y2_tick_format, $$.y2AxisTickValues, config.axis_y2_tick_outer);
+    }
 
     if ($$.subX) {
         $$.subXAxis = $$.axis.getXAxis($$.subX, $$.subXOrient, $$.xAxisTickFormat, $$.xAxisTickValues, config.axis_x_tick_outer);

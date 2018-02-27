@@ -402,15 +402,17 @@ c3_axis_fn.init = function init() {
         .attr("transform", config.axis_rotated ? "" : "rotate(-90)")
         .style("text-anchor", this.textAnchorForYAxisLabel.bind(this));
 
-    $$.axes.y2 = main.append("g")
-        .attr("class", CLASS.axis + ' ' + CLASS.axisY2)
-        // clip-path?
-        .attr("transform", $$.getTranslate('y2'))
-        .style("visibility", config.axis_y2_show ? 'visible' : 'hidden');
-    $$.axes.y2.append("text")
-        .attr("class", CLASS.axisY2Label)
-        .attr("transform", config.axis_rotated ? "" : "rotate(-90)")
-        .style("text-anchor", this.textAnchorForY2AxisLabel.bind(this));
+    if (config.axis_y2_show) {
+        $$.axes.y2 = main.append("g")
+            .attr("class", CLASS.axis + ' ' + CLASS.axisY2)
+            // clip-path?
+            .attr("transform", $$.getTranslate('y2'))
+            .style("visibility", config.axis_y2_show ? 'visible' : 'hidden');
+        $$.axes.y2.append("text")
+            .attr("class", CLASS.axisY2Label)
+            .attr("transform", config.axis_rotated ? "" : "rotate(-90)")
+            .style("text-anchor", this.textAnchorForY2AxisLabel.bind(this));
+    }
 };
 c3_axis_fn.getXAxis = function getXAxis(scale, orient, tickFormat, tickValues, withOuterTick, withoutTransition, withoutRotateTickText) {
     var $$ = this.owner, config = $$.config,
@@ -769,13 +771,17 @@ c3_axis_fn.redraw = function redraw(transitions, isHidden) {
     var $$ = this.owner;
     $$.axes.x.style("opacity", isHidden ? 0 : 1);
     $$.axes.y.style("opacity", isHidden ? 0 : 1);
-    $$.axes.y2.style("opacity", isHidden ? 0 : 1);
+    if ($$.axes.y2) {
+        $$.axes.y2.style("opacity", isHidden ? 0 : 1);
+    }
     if ($$.axes.subx) {
         $$.axes.subx.style("opacity", isHidden ? 0 : 1);
     }
     transitions.axisX.call($$.xAxis);
     transitions.axisY.call($$.yAxis);
-    transitions.axisY2.call($$.y2Axis);
+    if ($$.y2Axis) {
+        transitions.axisY2.call($$.y2Axis);
+    }
     if ($$.subXAxis) {
         transitions.axisSubX.call($$.subXAxis);
     }

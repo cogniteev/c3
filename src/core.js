@@ -213,7 +213,9 @@ c3_chart_internal_fn.initWithData = function (data) {
     // Set domains for each scale
     $$.x.domain(d3.extent($$.getXDomain($$.data.targets)));
     $$.y.domain($$.getYDomain($$.data.targets, 'y'));
-    $$.y2.domain($$.getYDomain($$.data.targets, 'y2'));
+    if ($$.y2) {
+        $$.y2.domain($$.getYDomain($$.data.targets, 'y2'));
+    }
 
     if ($$.subX) {
         $$.subX.domain($$.x.domain());
@@ -515,12 +517,14 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
     }
 
     $$.y.domain($$.getYDomain(targetsToShow, 'y', xDomainForZoom));
-    $$.y2.domain($$.getYDomain(targetsToShow, 'y2', xDomainForZoom));
+    if ($$.y2) {
+        $$.y2.domain($$.getYDomain(targetsToShow, 'y2', xDomainForZoom));
+    }
 
     if (!config.axis_y_tick_values && config.axis_y_tick_count) {
         $$.yAxis.tickValues($$.axis.generateTickValues($$.y.domain(), config.axis_y_tick_count));
     }
-    if (!config.axis_y2_tick_values && config.axis_y2_tick_count) {
+    if (!config.axis_y2_tick_values && config.axis_y2_tick_count && $$.y2Axis) {
         $$.y2Axis.tickValues($$.axis.generateTickValues($$.y2.domain(), config.axis_y2_tick_count));
     }
 
@@ -836,7 +840,9 @@ c3_chart_internal_fn.transformMain = function (withTransition, transitions) {
     (withTransition ? $$.main.transition() : $$.main).attr("transform", $$.getTranslate('main'));
     xAxis.attr("transform", $$.getTranslate('x'));
     yAxis.attr("transform", $$.getTranslate('y'));
-    y2Axis.attr("transform", $$.getTranslate('y2'));
+    if (y2Axis) {
+        y2Axis.attr("transform", $$.getTranslate('y2'));
+    }
     $$.main.select('.' + CLASS.chartArcs).attr("transform", $$.getTranslate('arc'));
 };
 c3_chart_internal_fn.transformAll = function (withTransition, transitions) {
@@ -884,7 +890,9 @@ c3_chart_internal_fn.updateDimension = function (withoutAxis) {
             }
         } else {
             $$.axes.y.call($$.yAxis);
-            $$.axes.y2.call($$.y2Axis);
+            if ($$.y2Axis) {
+                $$.axes.y2.call($$.y2Axis);
+            }
         }
     }
     $$.updateSizes();
