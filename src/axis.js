@@ -18,7 +18,7 @@ function AxisInternal(component, params) {
     internal.outerTickSize = this.params.withOuterTick ? 6 : 0;
     internal.tickPadding = 3;
     internal.tickValues = null;
-    internal.tickFormat;
+    internal.tickFormat = (v) => String(v);
     internal.tickArguments;
 
     internal.tickOffset = 0;
@@ -71,8 +71,8 @@ c3_axis_internal_fn.copyScale = function () {
     return newScale;
 };
 c3_axis_internal_fn.textFormatted = function (v) {
-    var internal = this,
-        formatted = internal.tickFormat ? internal.tickFormat(v) : v;
+    var internal = this;
+    var formatted = internal.tickFormat(v);
     return typeof formatted !== 'undefined' ? formatted : '';
 };
 c3_axis_internal_fn.updateRange = function () {
