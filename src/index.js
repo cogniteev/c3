@@ -47,7 +47,6 @@ import './shape.line';
 import './size';
 import './subchart';
 import './text';
-import './title';
 import './tooltip';
 import './type';
 import './ua';

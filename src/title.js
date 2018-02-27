@@ -1,51 +1,64 @@
-import { c3_chart_internal_fn } from './core';
-import { isEmpty } from './util';
+const C3Title = function({ text, padding, position, cssClass, container, computeTextRect }) {
+    this.text = text || '';
+    this.position = position || 'left';
+    this.padding = padding || { top: 0, bottom: 0, left: 0, right: 0 };
+    this.cssClass = cssClass;
+    this.computeTextRect = computeTextRect;
+    this.element = container.append("text");
+};
 
-c3_chart_internal_fn.initTitle = function () {
-    var $$ = this;
-    if (!isEmpty($$.config.title_text)) {
-        $$.title = $$.svg.append("text")
-            .text($$.config.title_text)
-            .attr("class", $$.CLASS.title);
-    }
-};
-c3_chart_internal_fn.redrawTitle = function () {
-    var $$ = this;
-    if ($$.title) {
-        $$.title
-            .attr("x", $$.xForTitle.bind($$))
-            .attr("y", $$.yForTitle.bind($$));
-    }
-};
-c3_chart_internal_fn.xForTitle = function () {
-    var $$ = this;
-    if ($$.title) {
-        var config = $$.config, position = config.title_position || 'left', x;
-        if (position.indexOf('right') >= 0) {
-            x = $$.currentWidth - $$.getTextRect($$.title.node().textContent, $$.CLASS.title, $$.title.node()).width - config.title_padding.right;
-        } else if (position.indexOf('center') >= 0) {
-            x = ($$.currentWidth - $$.getTextRect($$.title.node().textContent, $$.CLASS.title, $$.title.node()).width) / 2;
-        } else { // left
-            x = config.title_padding.left;
-        }
+/**
+ * Redraw the title
+ */
+C3Title.prototype.redraw = function({ currentWidth }) {
+    let yOffset = this.padding.top + this.height();
+
+    let xOffset;
+    if (this.position.indexOf('right') >= 0) {
+        xOffset = currentWidth - this.width() - this.padding.right;
+    } else if (this.position.indexOf('center') >= 0) {
+        xOffset = (currentWidth - this.width()) / 2;
     } else {
-        x = 0;
+        xOffset = this.padding.left;
     }
-    return x;
+
+    this.element
+        .text(this.text)
+        .attr(this.cssClass)
+        .attr('x', xOffset)
+        .attr('y', yOffset);
 };
-c3_chart_internal_fn.yForTitle = function () {
-    var $$ = this;
-    if ($$.title) {
-        return $$.config.title_padding.top + $$.getTextRect($$.title.node().textContent, $$.CLASS.title, $$.title.node()).height;
-    } else {
-        return 0;
+
+/**
+ *
+ * @returns {*}
+ */
+C3Title.prototype.getTextRect = function() {
+    if (!this._rectSize) {
+        this._rectSize = this.computeTextRect(this.text, this.cssClass, this.element.node());
     }
+    return this._rectSize;
 };
-c3_chart_internal_fn.getTitlePadding = function() {
-    var $$ = this;
-    if ($$.title) {
-        return $$.yForTitle() + $$.config.title_padding.bottom;
-    } else {
-        return 0;
-    }
+
+/**
+ * @returns The width of the title excluding its padding
+ */
+C3Title.prototype.width = function() {
+    return this.getTextRect().width;
 };
+
+/**
+ * @returns The height of the title excluding its padding
+ */
+C3Title.prototype.height = function() {
+    return this.getTextRect().height;
+};
+
+/**
+ * @returns The height of the title including its padding
+ */
+C3Title.prototype.outerHeight = function() {
+    return this.padding.top + this.height() + this.padding.bottom;
+};
+
+export { C3Title };

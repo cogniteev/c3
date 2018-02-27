@@ -2,6 +2,8 @@ import Axis from './axis';
 import CLASS from './class';
 import { isValue, isFunction, isString, isUndefined, isDefined, ceil10, asHalfPixel, diffDomain, isEmpty, notEmpty, getOption, hasValue, sanitise, getPathBox } from './util';
 
+import { C3Title } from './title';
+
 export var c3 = { version: "0.4.21" };
 
 export var c3_chart_fn;
@@ -263,7 +265,19 @@ c3_chart_internal_fn.initWithData = function (data) {
     if ($$.initSubchart && config.subchart_show) { $$.initSubchart(); }
     if ($$.initTooltip) { $$.initTooltip(); }
     if ($$.initLegend) { $$.initLegend(); }
-    if ($$.initTitle) { $$.initTitle(); }
+
+    if (!isEmpty(config.title_text)) {
+        $$.title = new C3Title({
+            container: $$.svg,
+            text: config.title_text,
+            padding: config.title_padding,
+            position: config.title_position,
+            cssClass: CLASS.title,
+            computeTextRect: function() {
+                return $$.getTextRect(...arguments);
+            }
+        });
+    }
 
     /*-- Main Region --*/
 
@@ -602,7 +616,9 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
     }
 
     // title
-    if ($$.redrawTitle) { $$.redrawTitle(); }
+    if ($$.title) {
+        $$.title.redraw({ currentWidth: $$.currentWidth });
+    }
 
     // arc
     if ($$.redrawArc) { $$.redrawArc(duration, durationForExit, withTransform); }
