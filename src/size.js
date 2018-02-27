@@ -12,13 +12,8 @@ c3_chart_internal_fn.getCurrentHeight = function () {
     return h > 0 ? h : 320 / ($$.hasType('gauge') && !config.gauge_fullCircle ? 2 : 1);
 };
 c3_chart_internal_fn.getCurrentPaddingTop = function () {
-    var $$ = this,
-        config = $$.config,
-        padding = isValue(config.padding_top) ? config.padding_top : 0;
-    if ($$.title && $$.title.node()) {
-        padding += $$.getTitlePadding();
-    }
-    return padding;
+    var $$ = this;
+    return ($$.config.padding_top || 0) + $$.getTitlePadding();
 };
 c3_chart_internal_fn.getCurrentPaddingBottom = function () {
     var config = this.config;
