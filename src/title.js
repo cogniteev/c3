@@ -1,3 +1,15 @@
+/**
+ * C3 Chart title
+ *
+ * @param text The title's text
+ * @param padding The padding around the title ({ top, bottom, left, right })
+ * @param position The position of the title (top-left, top-center, top-right)
+ * @param cssClass The css class to apply to the title
+ * @param container The SVG container in which to append the title
+ * @param computeTextRect A function to compute the size of a text in SVG
+ *
+ * @constructor
+ */
 const C3Title = function({ text, padding, position, cssClass, container, computeTextRect }) {
     this.text = text || '';
     this.position = position || 'left';
@@ -8,7 +20,9 @@ const C3Title = function({ text, padding, position, cssClass, container, compute
 };
 
 /**
- * Redraw the title
+ * Update the title text, classes and positioning
+ *
+ * @param currentWidth The current width of the title's container
  */
 C3Title.prototype.redraw = function({ currentWidth }) {
     let yOffset = this.padding.top + this.height();
@@ -30,8 +44,7 @@ C3Title.prototype.redraw = function({ currentWidth }) {
 };
 
 /**
- *
- * @returns {*}
+ * @returns The box size containing the title
  */
 C3Title.prototype.getTextRect = function() {
     if (!this._rectSize) {
