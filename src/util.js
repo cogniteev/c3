@@ -50,3 +50,8 @@ export var getPathBox = function (path) {
         minX = items[0].x, minY = Math.min(items[0].y, items[1].y);
     return {x: minX, y: minY, width: box.width, height: box.height};
 };
+
+export var getClipPath = function (id) {
+    var isIE9 = window.navigator.appVersion.toLowerCase().indexOf("msie 9.") >= 0;
+    return "url(" + (isIE9 ? "" : document.URL.split('#')[0]) + "#" + id + ")";
+};
