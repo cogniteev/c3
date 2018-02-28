@@ -10,9 +10,9 @@
  *
  * @constructor
  */
-const C3Title = function({ text, padding, position, cssClass, container, computeTextRect }) {
-    this.text = text || '';
-    this.position = position || 'left';
+const C3Title = function({ text = '', padding, position = 'top-center', cssClass = '', container, computeTextRect }) {
+    this.text = text;
+    this.position = position;
     this.padding = Object.assign({ top: 0, bottom: 0, left: 0, right: 0 }, padding || {});
     this.cssClass = cssClass;
     this.computeTextRect = computeTextRect;
