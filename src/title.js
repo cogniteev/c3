@@ -13,7 +13,7 @@
 const C3Title = function({ text, padding, position, cssClass, container, computeTextRect }) {
     this.text = text || '';
     this.position = position || 'left';
-    this.padding = padding || { top: 0, bottom: 0, left: 0, right: 0 };
+    this.padding = Object.assign({ top: 0, bottom: 0, left: 0, right: 0 }, padding || {});
     this.cssClass = cssClass;
     this.computeTextRect = computeTextRect;
     this.element = container.append("text");
