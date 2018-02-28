@@ -13,7 +13,9 @@ c3_chart_fn.xgrids.add = function (grids) {
 };
 c3_chart_fn.xgrids.remove = function (params) { // TODO: multiple
     var $$ = this.internal;
-    $$.removeGridLines(params, true);
+    if ($$.gridLines) {
+        $$.gridLines.removeXLines(params);
+    }
 };
 
 c3_chart_fn.ygrids = function (grids) {
@@ -29,5 +31,7 @@ c3_chart_fn.ygrids.add = function (grids) {
 };
 c3_chart_fn.ygrids.remove = function (params) { // TODO: multiple
     var $$ = this.internal;
-    $$.removeGridLines(params, false);
+    if ($$.gridLines) {
+        $$.gridLines.removeYLines(params);
+    }
 };

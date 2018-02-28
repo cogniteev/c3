@@ -3,6 +3,7 @@ import CLASS from './class';
 import { isValue, isFunction, isString, isUndefined, isDefined, ceil10, asHalfPixel, diffDomain, isEmpty, notEmpty, getOption, hasValue, sanitise, getPathBox } from './util';
 
 import { C3Title } from './title';
+import { C3GridLines } from './grid.lines';
 
 export var c3 = { version: "0.4.21" };
 
@@ -166,6 +167,15 @@ c3_chart_internal_fn.initChartElements = function () {
     if (this.initText) { this.initText(); }
 };
 
+const initGridLines = function($$, config) {
+    $$.gridLines = new C3GridLines({
+        container: $$.svg,
+        clipPath: $$.clipPathForGrid,
+        xLines: config.grid_x_lines,
+        yLines: config.grid_y_lines
+    });
+};
+
 c3_chart_internal_fn.initWithData = function (data) {
     var $$ = this, d3 = $$.d3, config = $$.config;
     var defs, main, binding = true;
@@ -293,13 +303,18 @@ c3_chart_internal_fn.initWithData = function (data) {
     // Grids
     $$.initGrid();
 
+    if (!config.grid_lines_front) {
+        initGridLines($$, config);
+    }
+
     // Define g for chart area
     main.append('g')
         .attr("clip-path", $$.clipPath)
         .attr('class', CLASS.chart);
 
-    // Grid lines
-    if (config.grid_lines_front) { $$.initGridLines(); }
+    if (config.grid_lines_front) {
+        initGridLines($$, config);
+    }
 
     // Cover whole with rects for events
     $$.initEventRect();
@@ -597,7 +612,14 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
         .style('opacity', targetsToShow.length ? 0 : 1);
 
     // grid
-    $$.updateGrid(duration);
+    $$.updateGrid();
+
+    if ($$.gridLines) {
+        $$.gridLines.update({
+            duration,
+            rotatedAxis: config.axis_rotated
+        });
+    }
 
     // rect for regions
     $$.updateRegion(duration);
@@ -676,7 +698,7 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
                 $$.redrawCircle(cx, cy, true),
                 $$.redrawText(xForText, yForText, options.flow, true),
                 $$.redrawRegion(true),
-                $$.redrawGrid(true),
+                $$.gridLines ? $$.gridLines.redraw({ withTransition: true }) : [],
             ].forEach(function (transitions) {
                 transitions.forEach(function (transition) {
                     transitionsToWait.push(transition);
@@ -705,7 +727,9 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
         $$.redrawCircle(cx, cy);
         $$.redrawText(xForText, yForText, options.flow);
         $$.redrawRegion();
-        $$.redrawGrid();
+        if ($$.gridLines) {
+            $$.gridLines.redraw({ withTransition: false });
+        }
         if (config.onrendered) {
             config.onrendered.call($$);
         }
