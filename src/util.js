@@ -1,5 +1,3 @@
-import { c3_chart_internal_fn } from './core';
-
 export var isValue = function (v) {
     return v || v === 0;
 };
@@ -31,7 +29,7 @@ export var isEmpty = function (o) {
     return typeof o === 'undefined' || o === null || (isString(o) && o.length === 0) || (typeof o === 'object' && Object.keys(o).length === 0);
 };
 export var notEmpty = function (o) {
-    return !c3_chart_internal_fn.isEmpty(o);
+    return !isEmpty(o);
 };
 export var getOption = function (options, key, defaultValue) {
     return isDefined(options[key]) ? options[key] : defaultValue;
