@@ -167,12 +167,10 @@ c3_chart_internal_fn.initChartElements = function () {
     if (this.initText) { this.initText(); }
 };
 
-const initGridLines = function($$, config) {
-    $$.gridLines = new C3GridLines({
-        container: $$.svg,
-        clipPath: $$.clipPathForGrid,
-        xLines: config.grid_x_lines,
-        yLines: config.grid_y_lines
+c3_chart_internal_fn.initGridLines = function() {
+    return new C3GridLines({
+        container: this.main,
+        clipPath: this.clipPathForGrid
     });
 };
 
@@ -303,8 +301,8 @@ c3_chart_internal_fn.initWithData = function (data) {
     // Grids
     $$.initGrid();
 
-    if (!config.grid_lines_front) {
-        initGridLines($$, config);
+    if ((notEmpty(config.grid_x_lines) || notEmpty(config.grid_y_lines)) && !config.grid_lines_front) {
+        $$.gridLines = this.initGridLines();
     }
 
     // Define g for chart area
@@ -312,8 +310,8 @@ c3_chart_internal_fn.initWithData = function (data) {
         .attr("clip-path", $$.clipPath)
         .attr('class', CLASS.chart);
 
-    if (config.grid_lines_front) {
-        initGridLines($$, config);
+    if ((notEmpty(config.grid_x_lines) || notEmpty(config.grid_y_lines)) && config.grid_lines_front) {
+        $$.gridLines = this.initGridLines();
     }
 
     // Cover whole with rects for events
@@ -617,7 +615,13 @@ c3_chart_internal_fn.redraw = function (options, transitions) {
     if ($$.gridLines) {
         $$.gridLines.update({
             duration,
-            rotatedAxis: config.axis_rotated
+            xLines: config.grid_x_lines,
+            yLines: config.grid_y_lines,
+            rotatedAxis: config.axis_rotated,
+            width: $$.width,
+            height: $$.height,
+            xv: $$.xv.bind($$),
+            yv: $$.yv.bind($$)
         });
     }
 
