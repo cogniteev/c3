@@ -160,10 +160,10 @@ c3_chart_internal_fn.clearCachedSizes = function() {
 };
 
 c3_chart_internal_fn.initChartElements = function () {
-    if (this.initBar) { this.initBar(); }
-    if (this.initLine) { this.initLine(); }
-    if (this.initArc) { this.initArc(); }
-    if (this.initGauge) { this.initGauge(); }
+    if (this.initBar && this.hasBarType()) { this.initBar(); }
+    if (this.initLine && this.hasLineType()) { this.initLine(); }
+    if (this.initArc && this.hasArcType()) { this.initArc(); }
+    if (this.initGauge && this.hasArcType()) { this.initGauge(); }
     if (this.initText) { this.initText(); }
 };
 
