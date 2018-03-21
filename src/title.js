@@ -38,7 +38,7 @@ C3Title.prototype.redraw = function({ currentWidth }) {
 
     this.element
         .text(this.text)
-        .attr(this.cssClass)
+        .attr('class', this.cssClass)
         .attr('x', xOffset)
         .attr('y', yOffset);
 };
