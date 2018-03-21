@@ -86,12 +86,6 @@ c3_chart_internal_fn.getTooltipSortFunction = function() {
             return i.id;
         });
 
-        // if it was either asc or desc we need to invert the order
-        // returned by orderTargets
-        if ($$.isOrderAsc() || $$.isOrderDesc()) {
-            ids = ids.reverse();
-        }
-
         return function(a, b) {
             return ids.indexOf(a.id) - ids.indexOf(b.id);
         };
