@@ -42,7 +42,7 @@ c3_chart_internal_fn.getX = function (min, max, domain, offset) {
 };
 
 function c3LogScale(d3, linearScale, logScale) {
-    var PROJECTION = [.01, 10];
+    var PROJECTION = [0.01, 10];
 
     if (!linearScale) {
         linearScale = d3.scale.linear();

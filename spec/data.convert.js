@@ -157,7 +157,7 @@ describe('data.convert', () => {
                     data3: null
                 }]
             });
-        })
+        });
     });
 
     describe('$$.convertTsvToData', () => {
@@ -211,7 +211,7 @@ describe('data.convert', () => {
                     data3: null
                 }]
             });
-        })
+        });
     });
 
     describe('$$.convertDataToTargets', () => {
@@ -389,5 +389,5 @@ describe('data.convert', () => {
             });
         });
 
-    })
+    });
 });

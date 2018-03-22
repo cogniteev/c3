@@ -1,5 +1,5 @@
 import { c3_chart_internal_fn } from './core';
-import { isString, notEmpty, isEmpty } from './util';
+import { isString, isEmpty } from './util';
 
 const LINE_TYPES = ['line', 'spline', 'area', 'area-spline', 'step', 'area-step'];
 

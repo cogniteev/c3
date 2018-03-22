@@ -142,7 +142,7 @@ c3_chart_internal_fn.redrawAreaForSubchart = function (drawAreaOnSub, withTransi
         .style("opacity", this.orgAreaOpacity);
 };
 c3_chart_internal_fn.redrawSubchart = function (withSubchart, transitions, duration, durationForExit, areaIndices, barIndices, lineIndices) {
-    var $$ = this, d3 = $$.d3, config = $$.config,
+    var $$ = this, d3 = $$.d3,
         drawAreaOnSub, drawBarOnSub, drawLineOnSub;
 
     // reflect main chart to extent on subchart if zoomed
