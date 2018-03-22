@@ -1,4 +1,4 @@
-/* @license C3.js v0.4.24-cogniteev | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.4.25 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -90,31 +90,26 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
   return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
 };
 
-
-
-
-
-
-
-
-
-
-
 var classCallCheck = function (instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
   }
 };
 
+var defineProperty = function (obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
 
-
-
-
-
-
-
-
-
+  return obj;
+};
 
 var inherits = function (subClass, superClass) {
   if (typeof superClass !== "function" && superClass !== null) {
@@ -132,22 +127,16 @@ var inherits = function (subClass, superClass) {
   if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
 };
 
-
-
-
-
-
-
-
-
-
-
 var possibleConstructorReturn = function (self, call) {
   if (!self) {
     throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
   }
 
   return call && (typeof call === "object" || typeof call === "function") ? call : self;
+};
+
+var toArray = function (arr) {
+  return Array.isArray(arr) ? arr : Array.from(arr);
 };
 
 var isValue = function isValue(v) {
@@ -1089,7 +1078,7 @@ C3Title.prototype.redraw = function (_ref2) {
         xOffset = this.padding.left;
     }
 
-    this.element.text(this.text).attr(this.cssClass).attr('x', xOffset).attr('y', yOffset);
+    this.element.text(this.text).attr('class', this.cssClass).attr('x', xOffset).attr('y', yOffset);
 };
 
 /**
@@ -1246,7 +1235,7 @@ C3GridLines.prototype.remove = function () {
     this.gridLines.remove();
 };
 
-var c3 = { version: "0.4.21" };
+var c3 = { version: "0.4.25" };
 
 var c3_chart_fn;
 var c3_chart_internal_fn;
@@ -2466,6 +2455,7 @@ if (!Function.prototype.bind) {
 // changes which were implemented in Firefox 43 and Chrome 46.
 
 (function () {
+
     if (!("SVGPathSeg" in window)) {
         // Spec: http://www.w3.org/TR/SVG11/single-page.html#paths-InterfaceSVGPathSeg
         window.SVGPathSeg = function (type, typeAsLetter, owningPathSegList) {
@@ -4703,7 +4693,18 @@ c3_chart_internal_fn.initPie = function () {
             return a + b.value;
         }, 0);
     });
-    $$.pie.sort($$.getOrderFunction() || null);
+
+    var orderFct = $$.getOrderFunction();
+
+    // we need to reverse the returned order if asc or desc to have the slice in expected order.
+    if (orderFct && ($$.isOrderAsc() || $$.isOrderDesc())) {
+        var defaultSort = orderFct;
+        orderFct = function orderFct(t1, t2) {
+            return defaultSort(t1, t2) * -1;
+        };
+    }
+
+    $$.pie.sort(orderFct || null);
 };
 
 c3_chart_internal_fn.updateRadius = function () {
@@ -5751,17 +5752,18 @@ c3_chart_internal_fn.convertUrlToData = function (url, mimeType, headers, keys, 
     });
 };
 c3_chart_internal_fn.convertXsvToData = function (xsv, parser) {
-    var rows = parser.parseRows(xsv),
-        d;
-    if (rows.length === 1) {
-        d = [{}];
-        rows[0].forEach(function (id) {
-            d[0][id] = null;
-        });
+    var _parser$parseRows = parser.parseRows(xsv),
+        _parser$parseRows2 = toArray(_parser$parseRows),
+        keys = _parser$parseRows2[0],
+        rows = _parser$parseRows2.slice(1);
+
+    if (rows.length === 0) {
+        return { keys: keys, rows: [keys.reduce(function (row, key) {
+                return Object.assign(row, defineProperty({}, key, null));
+            }, {})] };
     } else {
-        d = parser.parse(xsv);
+        return { keys: keys, rows: parser.parse(xsv) };
     }
-    return d;
 };
 c3_chart_internal_fn.convertCsvToData = function (csv) {
     return this.convertXsvToData(csv, this.d3.csv);
@@ -5822,7 +5824,7 @@ c3_chart_internal_fn.findValueInJson = function (object, path) {
 /**
  * Converts the rows to normalized data.
  * @param {any[][]} rows The row data
- * @return {Object[]}
+ * @return {Object}
  */
 c3_chart_internal_fn.convertRowsToData = function (rows) {
     var newRows = [];
@@ -5838,16 +5840,17 @@ c3_chart_internal_fn.convertRowsToData = function (rows) {
         }
         newRows.push(newRow);
     }
-    return newRows;
+    return { keys: keys, rows: newRows };
 };
 
 /**
  * Converts the columns to normalized data.
  * @param {any[][]} columns The column data
- * @return {Object[]}
+ * @return {Object}
  */
 c3_chart_internal_fn.convertColumnsToData = function (columns) {
     var newRows = [];
+    var keys = [];
 
     for (var i = 0; i < columns.length; i++) {
         var key = columns[i][0];
@@ -5860,17 +5863,30 @@ c3_chart_internal_fn.convertColumnsToData = function (columns) {
             }
             newRows[j - 1][key] = columns[i][j];
         }
+        keys.push(key);
     }
 
-    return newRows;
+    return { keys: keys, rows: newRows };
 };
 
 c3_chart_internal_fn.convertDataToTargets = function (data, appendXs) {
     var $$ = this,
         config = $$.config,
-        ids = $$.d3.keys(data[0]).filter($$.isNotX, $$),
-        xs = $$.d3.keys(data[0]).filter($$.isX, $$),
-        targets;
+        targets,
+        ids,
+        xs,
+        keys;
+
+    // handles format where keys are not orderly provided
+    if (isArray(data)) {
+        keys = Object.keys(data[0]);
+    } else {
+        keys = data.keys;
+        data = data.rows;
+    }
+
+    ids = keys.filter($$.isNotX, $$);
+    xs = keys.filter($$.isX, $$);
 
     // save x for update data by load when custom x and c3.x API
     ids.forEach(function (id) {
@@ -6262,13 +6278,13 @@ c3_chart_internal_fn.getOrderFunction = function () {
         orderAsc = $$.isOrderAsc(),
         orderDesc = $$.isOrderDesc();
     if (orderAsc || orderDesc) {
+        var reducer = function reducer(p, c) {
+            return p + Math.abs(c.value);
+        };
         return function (t1, t2) {
-            var reducer = function reducer(p, c) {
-                return p + Math.abs(c.value);
-            };
             var t1Sum = t1.values.reduce(reducer, 0),
                 t2Sum = t2.values.reduce(reducer, 0);
-            return orderDesc ? t2Sum - t1Sum : t1Sum - t2Sum;
+            return orderAsc ? t2Sum - t1Sum : t1Sum - t2Sum;
         };
     } else if (isFunction(config.data_order)) {
         return config.data_order;
@@ -6283,9 +6299,6 @@ c3_chart_internal_fn.orderTargets = function (targets) {
     var fct = this.getOrderFunction();
     if (fct) {
         targets.sort(fct);
-        if (this.isOrderAsc() || this.isOrderDesc()) {
-            targets.reverse();
-        }
     }
     return targets;
 };
@@ -9360,12 +9373,6 @@ c3_chart_internal_fn.getTooltipSortFunction = function () {
         var ids = $$.orderTargets($$.data.targets).map(function (i) {
             return i.id;
         });
-
-        // if it was either asc or desc we need to invert the order
-        // returned by orderTargets
-        if ($$.isOrderAsc() || $$.isOrderDesc()) {
-            ids = ids.reverse();
-        }
 
         return function (a, b) {
             return ids.indexOf(a.id) - ids.indexOf(b.id);
