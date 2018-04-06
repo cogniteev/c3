@@ -5,7 +5,7 @@ import { isValue, isFunction, isString, isUndefined, isDefined, ceil10, asHalfPi
 import { C3Title } from './title';
 import { C3GridLines } from './grid.lines';
 
-export var c3 = { version: "0.4.25" };
+export var c3 = { version: "0.4.26" };
 
 export var c3_chart_fn;
 export var c3_chart_internal_fn;
