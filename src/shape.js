@@ -64,8 +64,17 @@ c3_chart_internal_fn.getShapeOffset = function (typeFilter, indices, isSub) {
     };
 };
 c3_chart_internal_fn.isWithinShape = function (that, d) {
-    var $$ = this,
-        shape = $$.d3.select(that), isWithin;
+    var $$ = this;
+
+    // attempt to fix JS error upon destruction where $$.d3
+    // would not be available anymore
+    if (!$$.d3) {
+        return false;
+    }
+
+    var shape = $$.d3.select(that);
+    var isWithin = false;
+
     if (!$$.isTargetToShow(d.id)) {
         isWithin = false;
     }
