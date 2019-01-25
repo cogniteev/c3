@@ -1,4 +1,4 @@
-/* @license C3.js v0.4.28 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.4.29 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
 	typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
 	typeof define === 'function' && define.amd ? define(factory) :
@@ -1235,7 +1235,7 @@ C3GridLines.prototype.remove = function () {
     this.gridLines.remove();
 };
 
-var c3 = { version: "0.4.28" };
+var c3 = { version: "0.4.29" };
 
 var c3_chart_fn;
 var c3_chart_internal_fn;
@@ -2374,7 +2374,11 @@ c3_chart_internal_fn.parseDate = function (date) {
     if (date instanceof Date) {
         parsedDate = date;
     } else if (typeof date === 'string') {
-        parsedDate = $$.dataTimeFormat($$.config.data_xFormat).parse(date);
+        if ($$.config.data_xParseDate) {
+            parsedDate = $$.config.data_xParseDate(date);
+        } else {
+            parsedDate = $$.dataTimeFormat($$.config.data_xFormat).parse(date);
+        }
     } else if ((typeof date === 'undefined' ? 'undefined' : _typeof(date)) === 'object') {
         parsedDate = new Date(+date);
     } else if (typeof date === 'number' && !isNaN(date)) {
@@ -5479,6 +5483,7 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         transition_duration: 350,
         data_x: undefined,
         data_xs: {},
+        data_xParseDate: undefined,
         data_xFormat: '%Y-%m-%d',
         data_xLocaltime: true,
         data_xSort: true,
