@@ -32,6 +32,7 @@ c3_chart_internal_fn.getDefaultConfig = function () {
         transition_duration: 350,
         data_x: undefined,
         data_xs: {},
+        data_xParseDate: undefined,
         data_xFormat: '%Y-%m-%d',
         data_xLocaltime: true,
         data_xSort: true,

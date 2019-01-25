@@ -1102,7 +1102,11 @@ c3_chart_internal_fn.parseDate = function (date) {
     if (date instanceof Date) {
         parsedDate = date;
     } else if (typeof date === 'string') {
-        parsedDate = $$.dataTimeFormat($$.config.data_xFormat).parse(date);
+        if ($$.config.data_xParseDate) {
+            parsedDate = $$.config.data_xParseDate(date);
+        } else {
+            parsedDate = $$.dataTimeFormat($$.config.data_xFormat).parse(date);
+        }
     } else if (typeof date === 'object') {
         parsedDate = new Date(+date);
     } else if (typeof date === 'number' && !isNaN(date)) {
