@@ -111,6 +111,13 @@ ChartInternal.prototype.getHorizontalAxisHeight = function (axisId) {
     }
     if (axisId === 'y2' && !config.axis_y2_show) { return $$.rotated_padding_top; }
     // Calculate x axis height when tick rotated
+    if (axisId === 'x' && !config.axis_rotated) {
+        if (config.axis_x_tick_rotate) {
+            h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+        } else {
+            h = 15 + $$.axis.getMaxTickHeight(axisId);
+        }
+    }
     if (axisId === 'x' && !config.axis_rotated && config.axis_x_tick_rotate) {
         h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - Math.abs(config.axis_x_tick_rotate)) / 180);
     }
