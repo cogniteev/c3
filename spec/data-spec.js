@@ -11,7 +11,7 @@
     it('throws when data is an empty object', () => {
         expect(() => window.initChart(chart, args))
             .toThrowError(Error, /url or json or rows or columns is required/);
-    });        
+    });
 });
 
 describe('c3 chart data', function () {
@@ -1417,4 +1417,87 @@ describe('c3 chart data', function () {
 
     });
 
+    describe('data.stack', function() {
+        let chartHeight = 0;
+
+        beforeEach(() => {
+            args = {
+                data: {
+                    columns: [
+                        ["data1", 230, 50, 300],
+                        ["data2", 198, 87, 580]
+                    ],
+                    type: "bar",
+                    groups: [
+                        ["data1", "data2"]
+                    ],
+                    stack: {
+                        normalize: true
+                    }
+                }
+            };
+        });
+
+        it("check for the normalized y axis tick in percentage", () => {
+            const tick = chart.$.main.selectAll(`.c3-axis-y .tick tspan`);
+
+            // check for the y axis to be in percentage
+            tick.each(function (v, i) {
+                expect(this.textContent).to.be.equal(`${i * 10}%`);
+            });
+        });
+
+        it("check for the normalized bar's height", () => {
+            chartHeight = +chart.$.main.selectAll(`.c3-zoom-rect`).attr("height") - 1;
+            const bars = chart.$.bar.bars.nodes().concat();
+
+            bars.splice(0, 3).forEach((v, i) => {
+                expect(v.getBBox().height + bars[i].getBBox().height).to.be.equal(chartHeight);
+            });
+        });
+
+        it("check when hiding data", done => {
+            // when
+            chart.hide("data1");
+
+            setTimeout(() => {
+                chart.$.main.selectAll(`.c3-target-data2 path`).each(function() {
+                    expect(this.getBBox().height).to.be.equal(chartHeight);
+                });
+
+                done();
+            }, 300);
+        });
+
+        it("set options data.type='area'", () => {
+            args.data.type = "area";
+            args.data.columns = [
+                ["data1", 200, 387, 123],
+                ["data2", 200, 387, 123]
+            ];
+        });
+
+        it("check for the normalized area's height", () => {
+            let areaHeight = 0;
+
+            chart.$.main.selectAll(`.c3-areas path`).each(function() {
+                areaHeight += this.getBBox().height;
+            });
+
+            expect(areaHeight).to.be.equal(chartHeight);
+        });
+
+        it("check for the normalized default tooltip", () => {
+            let tooltipValue = 0;
+
+            // show tooltip
+            chart.tooltip.show({index:1});
+
+            chart.$.tooltip.selectAll(".value").each(function() {
+                tooltipValue += parseInt(this.textContent);
+            });
+
+            expect(tooltipValue).to.be.equal(100);
+        });
+    });
 });
