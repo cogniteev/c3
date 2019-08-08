@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.3-patch0 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.3-patch1 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -1181,7 +1181,7 @@
   };
 
   var c3 = {
-    version: "0.7.3-patch0",
+    version: "0.7.3-patch1",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -5333,7 +5333,7 @@
   ChartInternal.prototype.initPie = function () {
     var $$ = this,
         d3 = $$.d3;
-    $$.pie = d3.pie().padAngle(this.getPadAngle).value(function (d) {
+    $$.pie = d3.pie().padAngle(this.getPadAngle.bind(this)).value(function (d) {
       return d.values.reduce(function (a, b) {
         return a + b.value;
       }, 0);
