@@ -36,9 +36,6 @@ Chart.prototype.destroy = function () {
     // Removes the inner resize functions
     $$.resizeFunction.remove();
 
-    // Unbinds from the window focus event
-    $$.unbindWindowFocus();
-
     $$.selectChart.classed('c3', false).html("");
 
     // MEMO: this is needed because the reference of some elements will not be released, then memory leak will happen.

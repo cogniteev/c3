@@ -27,20 +27,6 @@ describe('c3 chart', function () {
             expect(svg).not.toBeNull();
         });
 
-        it('should bind to window focus event', done => {
-            const addEventListener = window.addEventListener;
-            window.addEventListener = (event, handler) => {
-                if (event === 'focus') {
-                    setTimeout(() => {
-                      expect(handler).toBe(chart.internal.windowFocusHandler);
-                      window.addEventListener = addEventListener; // restore the original
-                      done();
-                    }, 10);
-                }
-            };
-            chart = window.initChart(chart, args, () => {});
-        });
-
         describe('should set 3rd party property to Function', function () {
             beforeAll(function () {
                 Function.prototype.$extIsFunction = true;
