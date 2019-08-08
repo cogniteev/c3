@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.3 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.3-patch0 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -685,6 +685,9 @@
   var isFunction = function isFunction(o) {
     return typeof o === 'function';
   };
+  var isNumber = function isNumber(o) {
+    return typeof o === 'number';
+  };
   var isString = function isString(o) {
     return typeof o === 'string';
   };
@@ -699,6 +702,11 @@
   };
   var sanitise = function sanitise(str) {
     return typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
+  };
+  var mergeArray = function mergeArray(arr) {
+    return arr && arr.length ? arr.reduce(function (p, c) {
+      return p.concat(c);
+    }) : [];
   };
 
   var Axis = function Axis(owner) {
@@ -783,7 +791,9 @@
       withoutTransition: withoutTransition,
       tickTextRotate: withoutRotateTickText ? 0 : config.axis_y_tick_rotate
     },
-        axis = new this.internal(this, axisParams).axis.scale(scale).orient(orient).tickFormat(tickFormat);
+        axis = new this.internal(this, axisParams).axis.scale(scale).orient(orient).tickFormat(tickFormat || $$.isStackNormalized() && function (x) {
+      return "".concat(x, "%");
+    });
 
     if ($$.isTimeSeriesY()) {
       axis.ticks(config.axis_y_tick_time_type, config.axis_y_tick_time_interval);
@@ -1020,19 +1030,23 @@
     return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
   };
 
-  Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+  Axis.prototype.getMaxTickBox = function getMaxTickWidth(id, withoutRecompute) {
     var $$ = this.owner,
         config = $$.config,
-        maxWidth = 0,
         targetsToShow,
         scale,
         axis,
         dummy,
         svg;
 
-    if (withoutRecompute && $$.currentMaxTickWidths[id]) {
-      return $$.currentMaxTickWidths[id];
+    if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
+      return $$.currentMaxTickBoxes[id];
     }
+
+    var maxBox = {
+      height: 0,
+      width: 0
+    };
 
     if ($$.svg) {
       targetsToShow = $$.filterTargetsToShow($$.data.targets);
@@ -1053,17 +1067,23 @@
       svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0), svg.append('g').call(axis).each(function () {
         $$.d3.select(this).selectAll('text').each(function () {
           var box = this.getBoundingClientRect();
-
-          if (maxWidth < box.width) {
-            maxWidth = box.width;
-          }
+          maxBox.width = Math.max(maxBox.width, box.width);
+          maxBox.height = Math.max(maxBox.height, box.height);
         });
         dummy.remove();
       });
     }
 
-    $$.currentMaxTickWidths[id] = maxWidth <= 0 ? $$.currentMaxTickWidths[id] : maxWidth;
-    return $$.currentMaxTickWidths[id];
+    $$.currentMaxTickBoxes[id] = maxBox;
+    return $$.currentMaxTickBoxes[id];
+  };
+
+  Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).width;
+  };
+
+  Axis.prototype.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
+    return this.getMaxTickBox(id, withoutRecompute).height;
   };
 
   Axis.prototype.updateLabels = function updateLabels(withTransition) {
@@ -1161,7 +1181,7 @@
   };
 
   var c3 = {
-    version: "0.7.3",
+    version: "0.7.3-patch0",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -1276,11 +1296,7 @@
     $$.legendStep = 0;
     $$.legendItemWidth = 0;
     $$.legendItemHeight = 0;
-    $$.currentMaxTickWidths = {
-      x: 0,
-      y: 0,
-      y2: 0
-    };
+    $$.currentMaxTickBoxes = {};
     $$.rotated_padding_left = 30;
     $$.rotated_padding_right = config.axis_rotated && !config.axis_x_show ? 0 : 30;
     $$.rotated_padding_top = 5;
@@ -4362,16 +4378,37 @@
   Chart.prototype.data.shown = function (targetIds) {
     return this.internal.filterTargetsToShow(this.data(targetIds));
   };
+  /**
+   * Get values of the data loaded in the chart.
+   *
+   * @param {String|Array} targetId This API returns the value of specified target.
+   * @param flat
+   * @return {Array} Data values
+   */
+
 
   Chart.prototype.data.values = function (targetId) {
-    var targets,
-        values = null;
+    var flat = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+    var values = null;
 
     if (targetId) {
-      targets = this.data(targetId);
-      values = targets[0] ? targets[0].values.map(function (d) {
-        return d.value;
-      }) : null;
+      var targets = this.data(targetId);
+
+      if (targets && isArray(targets)) {
+        values = targets.reduce(function (ret, v) {
+          var dataValue = v.values.map(function (d) {
+            return d.value;
+          });
+
+          if (flat) {
+            ret = ret.concat(dataValue);
+          } else {
+            ret.push(dataValue);
+          }
+
+          return ret;
+        }, []);
+      }
     }
 
     return values;
@@ -4388,6 +4425,26 @@
 
   Chart.prototype.data.axes = function (axes) {
     return this.internal.updateDataAttributes('axes', axes);
+  };
+
+  Chart.prototype.data.stackNormalized = function (normalized) {
+    if (normalized === undefined) {
+      return this.internal.isStackNormalized();
+    }
+
+    this.internal.config.data_stack_normalize = !!normalized;
+    this.internal.redraw();
+  };
+
+  Chart.prototype.donut = function () {};
+
+  Chart.prototype.donut.padAngle = function (padAngle) {
+    if (padAngle === undefined) {
+      return this.internal.config.donut_padAngle;
+    }
+
+    this.internal.config.donut_padAngle = padAngle;
+    this.flush();
   };
 
   Chart.prototype.flow = function (args) {
@@ -4900,6 +4957,17 @@
     });
   };
 
+  Chart.prototype.pie = function () {};
+
+  Chart.prototype.pie.padAngle = function (padAngle) {
+    if (padAngle === undefined) {
+      return this.internal.config.pie_padAngle;
+    }
+
+    this.internal.config.pie_padAngle = padAngle;
+    this.flush();
+  };
+
   Chart.prototype.regions = function (regions) {
     var $$ = this.internal,
         config = $$.config;
@@ -5265,7 +5333,7 @@
   ChartInternal.prototype.initPie = function () {
     var $$ = this,
         d3 = $$.d3;
-    $$.pie = d3.pie().value(function (d) {
+    $$.pie = d3.pie().padAngle(this.getPadAngle).value(function (d) {
       return d.values.reduce(function (a, b) {
         return a + b.value;
       }, 0);
@@ -5293,6 +5361,16 @@
     $$.innerRadiusRatio = w ? ($$.radius - w) / $$.radius : 0.6;
     $$.innerRadius = $$.hasType('donut') || $$.hasType('gauge') ? $$.radius * $$.innerRadiusRatio : 0;
     $$.gaugeArcWidth = w ? w : gaugeArcWidth <= $$.radius - $$.innerRadius ? $$.radius - $$.innerRadius : gaugeArcWidth <= $$.radius ? gaugeArcWidth : $$.radius;
+  };
+
+  ChartInternal.prototype.getPadAngle = function () {
+    if (this.hasType('pie')) {
+      return this.config.pie_padAngle || 0;
+    } else if (this.hasType('donut')) {
+      return this.config.donut_padAngle || 0;
+    } else {
+      return 0;
+    }
   };
 
   ChartInternal.prototype.updateArc = function () {
@@ -5429,19 +5507,20 @@
 
     return translate;
   };
+  /**
+   * @deprecated Use `getRatio('arc', d)` instead.
+   */
+
 
   ChartInternal.prototype.getArcRatio = function (d) {
-    var $$ = this,
-        config = $$.config,
-        whole = Math.PI * ($$.hasType('gauge') && !config.gauge_fullCircle ? 1 : 2);
-    return d ? (d.endAngle - d.startAngle) / whole : null;
+    return this.getRatio('arc', d);
   };
 
   ChartInternal.prototype.convertToArcData = function (d) {
     return this.addName({
       id: d.data.id,
       value: d.value,
-      ratio: this.getArcRatio(d),
+      ratio: this.getRatio('arc', d),
       index: d.index
     });
   };
@@ -5460,7 +5539,7 @@
 
     updated = $$.updateAngle(d);
     value = updated ? updated.value : null;
-    ratio = $$.getArcRatio(updated);
+    ratio = $$.getRatio('arc', updated);
     id = d.data.id;
 
     if (!$$.hasType('gauge') && !$$.meetsArcLabelThreshold(ratio)) {
@@ -5822,6 +5901,43 @@
     return this.config.gauge_label_show ? 20 : 0;
   };
 
+  /**
+   * Store value into cache
+   *
+   * @param key
+   * @param value
+   */
+
+  ChartInternal.prototype.addToCache = function (key, value) {
+    this.cache["$".concat(key)] = value;
+  };
+  /**
+   * Returns a cached value or undefined
+   *
+   * @param key
+   * @return {*}
+   */
+
+
+  ChartInternal.prototype.getFromCache = function (key) {
+    return this.cache["$".concat(key)];
+  };
+  /**
+   * Reset cached data
+   */
+
+
+  ChartInternal.prototype.resetCache = function () {
+    var _this = this;
+
+    Object.keys(this.cache).filter(function (key) {
+      return /^\$/.test(key);
+    }).forEach(function (key) {
+      delete _this.cache[key];
+    });
+  }; // Old API that stores Targets
+
+
   ChartInternal.prototype.hasCaches = function (ids) {
     for (var i = 0; i < ids.length; i++) {
       if (!(ids[i] in this.cache)) {
@@ -6182,6 +6298,7 @@
       },
       data_selection_multiple: true,
       data_selection_draggable: false,
+      data_stack_normalize: false,
       data_onclick: function data_onclick() {},
       data_onmouseover: function data_onmouseover() {},
       data_onmouseout: function data_onmouseout() {},
@@ -6311,6 +6428,7 @@
       pie_label_ratio: undefined,
       pie_expand: {},
       pie_expand_duration: 50,
+      pie_padAngle: 0,
       // gauge
       gauge_fullCircle: false,
       gauge_label_show: true,
@@ -6334,6 +6452,7 @@
       donut_title: "",
       donut_expand: {},
       donut_expand_duration: 50,
+      donut_padAngle: 0,
       // spline
       spline_interpolation_type: 'cardinal',
       // stanford
@@ -6770,10 +6889,74 @@
     return !this.isX(key) && !this.isEpochs(key);
   };
 
+  ChartInternal.prototype.isStackNormalized = function () {
+    return this.config.data_stack_normalize && this.config.data_groups.length;
+  };
+
   ChartInternal.prototype.getXKey = function (id) {
     var $$ = this,
         config = $$.config;
     return config.data_x ? config.data_x : notEmpty(config.data_xs) ? config.data_xs[id] : null;
+  };
+  /**
+   * Get sum of data per index
+   *
+   * @private
+   * @return {Array}
+   */
+
+
+  ChartInternal.prototype.getTotalPerIndex = function () {
+    var $$ = this;
+
+    if (!$$.isStackNormalized()) {
+      return [];
+    }
+
+    var cached = $$.getFromCache('getTotalPerIndex');
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    var sum = [];
+    $$.data.targets.forEach(function (row) {
+      row.values.forEach(function (v, i) {
+        if (!sum[i]) {
+          sum[i] = 0;
+        }
+
+        sum[i] += isNumber(v.value) ? v.value : 0;
+      });
+    });
+    $$.addToCache('getTotalPerIndex', sum);
+    return sum;
+  };
+  /**
+   * Get total data sum
+   *
+   * @private
+   * @return {Number}
+   */
+
+
+  ChartInternal.prototype.getTotalDataSum = function () {
+    var $$ = this;
+    var cached = $$.getFromCache('getTotalDataSum');
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    var totalDataSum = mergeArray($$.data.targets.map(function (t) {
+      return t.values;
+    })).map(function (v) {
+      return v.value;
+    }).reduce(function (p, c) {
+      return p + c;
+    });
+    $$.addToCache('getTotalDataSum', totalDataSum);
+    return totalDataSum;
   };
 
   ChartInternal.prototype.getXValuesOfXKey = function (key, targets) {
@@ -7212,6 +7395,68 @@
     };
     return converted;
   };
+  /**
+   * Get ratio value
+   *
+   * @param {String} type Ratio for given type
+   * @param {Object} d Data value object
+   * @param {Boolean} asPercent Convert the return as percent or not
+   * @return {Number} Ratio value
+   * @private
+   */
+
+
+  ChartInternal.prototype.getRatio = function (type, d) {
+    var asPercent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+    var $$ = this;
+    var config = $$.config;
+    var api = $$.api;
+    var ratio = 0;
+
+    if (d && api.data.shown.call(api).length) {
+      var dataValues = api.data.values.bind(api);
+      ratio = d.ratio || d.value;
+
+      if (type === "arc") {
+        // if has padAngle set, calculate rate based on value
+        if ($$.pie.padAngle()()) {
+          var total = $$.getTotalDataSum();
+
+          if ($$.hiddenTargetIds.length) {
+            total -= dataValues($$.hiddenTargetIds).reduce(function (p, c) {
+              return p + c;
+            });
+          }
+
+          ratio = d.value / total; // otherwise, based on the rendered angle value
+        } else {
+          ratio = (d.endAngle - d.startAngle) / (Math.PI * ($$.hasType("gauge") && !config.gauge_fullCircle ? 1 : 2));
+        }
+      } else if (type === "index") {
+        var _total = this.getTotalPerIndex();
+
+        if ($$.hiddenTargetIds.length) {
+          var hiddenSum = dataValues($$.hiddenTargetIds, false);
+
+          if (hiddenSum.length) {
+            hiddenSum = hiddenSum.reduce(function (acc, curr) {
+              return acc.map(function (v, i) {
+                return (isNumber(v) ? v : 0) + curr[i];
+              });
+            });
+            _total = _total.map(function (v, i) {
+              return v - hiddenSum[i];
+            });
+          }
+        }
+
+        d.ratio = isNumber(d.value) && _total && _total[d.index] > 0 ? d.value / _total[d.index] : 0;
+        ratio = d.ratio;
+      }
+    }
+
+    return asPercent && ratio ? ratio * 100 : ratio;
+  };
 
   ChartInternal.prototype.updateDataAttributes = function (name, attrs) {
     var $$ = this,
@@ -7277,6 +7522,7 @@
 
   ChartInternal.prototype.loadFromArgs = function (args) {
     var $$ = this;
+    $$.resetCache();
 
     if (args.data) {
       $$.load($$.convertDataToTargets(args.data), args);
@@ -7297,6 +7543,7 @@
 
   ChartInternal.prototype.unload = function (targetIds, done) {
     var $$ = this;
+    $$.resetCache();
 
     if (!done) {
       done = function done() {};
@@ -7442,8 +7689,13 @@
 
   ChartInternal.prototype.getYDomain = function (targets, axisId, xDomain) {
     var $$ = this,
-        config = $$.config,
-        targetsByAxisId = targets.filter(function (t) {
+        config = $$.config;
+
+    if ($$.isStackNormalized()) {
+      return [0, 100];
+    }
+
+    var targetsByAxisId = targets.filter(function (t) {
       return $$.axis.getId(t.id) === axisId;
     }),
         yTargets = xDomain ? $$.filterByXDomain(targetsByAxisId, xDomain) : targetsByAxisId,
@@ -9095,10 +9347,11 @@
         if (0 < d.value && posY < y0 || d.value < 0 && y0 < posY) {
           posY = y0;
         }
-      } // 4 points that make a bar
+      }
 
+      posY -= y0 - offset; // 4 points that make a bar
 
-      return [[posX + barSpaceOffset, offset], [posX + barSpaceOffset, posY - (y0 - offset)], [posX + barW - barSpaceOffset, posY - (y0 - offset)], [posX + barW - barSpaceOffset, offset]];
+      return [[posX + barSpaceOffset, offset], [posX + barSpaceOffset, posY], [posX + barW - barSpaceOffset, posY], [posX + barW - barSpaceOffset, offset]];
     };
   };
 
@@ -9162,9 +9415,10 @@
 
   ChartInternal.prototype.getShapeY = function (isSub) {
     var $$ = this;
+    var isStackNormalized = $$.isStackNormalized();
     return function (d) {
       var scale = isSub ? $$.getSubYScale(d.id) : $$.getYScale(d.id);
-      return scale(d.value);
+      return scale(isStackNormalized ? $$.getRatio('index', d, true) : d.value);
     };
   };
 
@@ -9179,7 +9433,10 @@
           y0 = scale(0),
           offset = y0;
       targets.forEach(function (t) {
-        var values = $$.isStepType(d) ? $$.convertValuesToStep(t.values) : t.values;
+        var rowValues = $$.isStepType(d) ? $$.convertValuesToStep(t.values) : t.values;
+        var values = rowValues.map(function (v) {
+          return $$.isStackNormalized() ? $$.getRatio("index", v, true) : v.value;
+        });
 
         if (t.id === d.id || indices[t.id] !== indices[d.id]) {
           return;
@@ -9187,19 +9444,22 @@
 
         if (targetIds.indexOf(t.id) < targetIds.indexOf(d.id)) {
           // check if the x values line up
-          if (typeof values[i] === 'undefined' || +values[i].x !== +d.x) {
+          if (isUndefined(rowValues[i]) || +rowValues[i].x !== +d.x) {
             // "+" for timeseries
             // if not, try to find the value that does line up
             i = -1;
-            values.forEach(function (v, j) {
-              if (v.x === d.x) {
+            rowValues.forEach(function (v, j) {
+              var x1 = v.x.constructor === Date ? +v.x : v.x;
+              var x2 = d.x.constructor === Date ? +d.x : d.x;
+
+              if (x1 === x2) {
                 i = j;
               }
             });
           }
 
-          if (i in values && values[i].value * d.value >= 0) {
-            offset += scale(values[i].value) - y0;
+          if (i in rowValues && rowValues[i].value * d.value >= 0) {
+            offset += scale(values[i]) - y0;
           }
         }
       });
@@ -9853,6 +10113,14 @@
       return $$.rotated_padding_top;
     } // Calculate x axis height when tick rotated
 
+
+    if (axisId === 'x' && !config.axis_rotated) {
+      if (config.axis_x_tick_rotate) {
+        h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - config.axis_x_tick_rotate) / 180);
+      } else {
+        h = 15 + $$.axis.getMaxTickHeight(axisId);
+      }
+    }
 
     if (axisId === 'x' && !config.axis_rotated && config.axis_x_tick_rotate) {
       h = 30 + $$.axis.getMaxTickWidth(axisId) * Math.cos(Math.PI * (90 - Math.abs(config.axis_x_tick_rotate)) / 180);
@@ -10746,13 +11014,20 @@
         nameFormat = config.tooltip_format_name || function (name) {
       return name;
     },
-        valueFormat = config.tooltip_format_value || defaultValueFormat,
         text,
         i,
         title,
         value,
         name,
         bgcolor;
+
+    var valueFormat = config.tooltip_format_value;
+
+    if (!valueFormat) {
+      valueFormat = $$.isStackNormalized() ? function (v, ratio) {
+        return "".concat((ratio * 100).toFixed(2), "%");
+      } : defaultValueFormat;
+    }
 
     var tooltipSortFunction = this.getTooltipSortFunction();
 
