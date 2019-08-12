@@ -137,6 +137,9 @@ ChartInternal.prototype.convertColumnsToData = (columns) => {
 ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
     var $$ = this, config = $$.config, targets, ids, xs, keys, epochs;
 
+    const isCustomX = $$.isCustomX();
+    const isCategorized = $$.isCategorized();
+
     // handles format where keys are not orderly provided
     if (isArray(data)) {
         keys = Object.keys(data[ 0 ]);
@@ -162,7 +165,7 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
     ids.forEach(function (id) {
         var xKey = $$.getXKey(id);
 
-        if ($$.isCustomX() || $$.isTimeSeries()) {
+        if (isCustomX || $$.isTimeSeries()) {
             // if included in input data
             if (xs.indexOf(xKey) >= 0) {
                 $$.data.xs[id] = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []).concat(
@@ -202,7 +205,7 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
                 var xKey = $$.getXKey(id), rawX = d[xKey],
                     value = d[id] !== null && !isNaN(d[id]) ? +d[id] : null, x, returnData;
                 // use x as categories if custom x and categorized
-                if ($$.isCustomX() && $$.isCategorized() && !isUndefined(rawX)) {
+                if (isCustomX && isCategorized && !isUndefined(rawX)) {
                     if (index === 0 && i === 0) {
                         config.axis_x_categories = [];
                     }
