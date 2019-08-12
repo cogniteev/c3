@@ -140,6 +140,9 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
     const isCustomX = $$.isCustomX();
     const isCategorized = $$.isCategorized();
 
+    console.log(JSON.stringify(data, null, 2));
+    console.log(appendXs);
+
     // handles format where keys are not orderly provided
     if (isArray(data)) {
         keys = Object.keys(data[ 0 ]);
@@ -161,6 +164,10 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
         }
     }
 
+    console.log('keys', keys);
+    console.log('rows', data);
+    console.log('xs', xs);
+
     // save x for update data by load when custom x and c3.x API
     ids.forEach(function (id) {
         var xKey = $$.getXKey(id);
@@ -170,7 +177,6 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
             if (xs.indexOf(xKey) >= 0) {
                 $$.data.xs[id] = (appendXs && $$.data.xs[id] ? $$.data.xs[id] : []).concat(
                     data.map(function (d) { return d[xKey]; })
-                        .filter(isValue)
                         .map(function (rawX, i) { return $$.generateTargetX(rawX, id, i); })
                 );
             }
@@ -194,6 +200,10 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
             throw new Error('x is not defined for id = "' + id + '".');
         }
     });
+
+    // TODO: filter $$.data.xs[id] with only kept values during target generation
+
+    console.log('xs(end)', $$.data.xs);
 
     // convert to target
     targets = ids.map(function (id, index) {
@@ -229,7 +239,7 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
                 }
 
                 return returnData;
-            }).filter(function (v) { return isDefined(v.x); })
+            }).filter(function (v) { return isDefined(v.x) && v.x !== null; })
         };
     });
 
@@ -254,6 +264,8 @@ ChartInternal.prototype.convertDataToTargets = function (data, appendXs) {
             return v1 - v2;
         });
     });
+
+    console.log(JSON.stringify(targets, null, 2));
 
     // cache information about values
     $$.hasNegativeValue = $$.hasNegativeValueInTargets(targets);

@@ -8,15 +8,76 @@
     <script src="https://d3js.org/d3.v5.min.js" charset="utf-8"></script>
     <script src="../js/c3.js"></script>
     <script>
+      /*
       var chart = c3.generate({
         data: {
+          xs: {
+            "Series": 'Series_x'
+          },
           columns: [
-            ['data1', 30, 200, 100, 400, 150, 250],
-            ['data2', 50, 20, 10, 40, 15, 25]
+            ["Series_x", 1, null, 10, 15],
+            ["Series", 4.0, null, 5.0, 6.0],
           ],
-          onclick: function (d, element) { console.log("onclick", d, element); },
-          onmouseover: function (d) { console.log("onmouseover", d); },
-          onmouseout: function (d) { console.log("onmouseout", d); },
+          type: 'line'
+        }
+      });*/
+
+      var chart = c3.generate({
+        data: {
+          xs: {
+            "d1": "d1_x",
+            "d2": "d2_x",
+            "d1Avg" : "d1Avg_x",
+            "d2Avg" : "d2Avg_x"
+          },
+          rows: [
+            [ 'd1', 'd1_x', 'd2', 'd2_x', 'd1Avg', 'd1Avg_x', 'd2Avg', 'd2Avg_x' ],
+
+            [ null, null, null, null, null, null, null, null ],
+
+            [ -2.46, -6.24, null, null, null, null, null, null ],
+
+            [ 4.09, -0.29, 4.84, -4.19, null, null, null, null ],
+
+            [ -2.97, -5.98, 1.97, -1.74, null, null, null, null ],
+
+            [ -0.46, -7.15, -0.45, -0.01, -0.45, -4.71, 1.19, -2.64 ]
+          ],
+          type: 'line',
+          xSort: false
+        },
+        color:{
+          pattern: [ '#ff0000', '#3399ff' ]
+        },
+        grid: {
+          x: {
+            show: true,
+            lines: [
+              {value: 0, class: 'c3_line_axis'}
+            ]
+          },
+          y: {
+            show: true,
+            lines: [
+              {value: 0, class: 'c3_line_axis'}
+            ]
+          }
+        },
+        axis:{
+          x: {
+            tick: {
+              fit: false
+            },
+            max: 7.2,
+            min: -7.2
+          },
+          y: {
+            max: 7.2,
+            min: -7.2
+          }
+        },
+        title: {
+          text: 'Boggle'
         }
       });
     </script>

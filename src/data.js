@@ -43,7 +43,11 @@ ChartInternal.prototype.getXValuesOfXKey = function (key, targets) {
 };
 ChartInternal.prototype.getXValue = function (id, i) {
     var $$ = this;
-    return id in $$.data.xs && $$.data.xs[id] && isValue($$.data.xs[id][i]) ? $$.data.xs[id][i] : i;
+    if ($$.data.xs[id] && isValue($$.data.xs[id][i])) {
+        return $$.data.xs[id][i];
+    } else {
+        return null;
+    }
 };
 ChartInternal.prototype.getOtherTargetXs = function () {
     var $$ = this,

@@ -246,6 +246,179 @@ describe('data.convert', () => {
             }]);
         });
 
+        it('handles falsy values with custom X category', () => {
+            const targets = $$.convertDataToTargets({
+                xs: {
+                    "Series": 'Series_x'
+                },
+                columns: [
+                    ["Series_x", 1, 5, 10, 15],
+                    ["Series", 4.0, null, 5.0, 6.0],
+                ],
+                type: 'scatter'
+            });
+
+            console.log(targets);
+        });
+
+        it('handles falsy values with multiple custom X values', () => {
+            const targets = $$.convertDataToTargets({
+                'keys': [ 'd1', 'd1_x', 'd2', 'd2_x', 'd1Avg', 'd1Avg_x', 'd2Avg', 'd2Avg_x' ],
+                'rows': [
+                    { 'd1': null, 'd1_x': 0, 'd2': null, 'd2_x': undefined, 'd1Avg': null, 'd1Avg_x': '', 'd2Avg': null, 'd2Avg_x': null },
+                    { 'd1': -2.46, 'd1_x': -6.24, 'd2': null, 'd2_x': null, 'd1Avg': null, 'd1Avg_x': null, 'd2Avg': null, 'd2Avg_x': null },
+                    { 'd1': 4.09, 'd1_x': -0.29, 'd2': 4.84, 'd2_x': -4.19, 'd1Avg': null, 'd1Avg_x': null, 'd2Avg': null, 'd2Avg_x': null },
+                    { 'd1': -2.97, 'd1_x': -5.98, 'd2': 1.97, 'd2_x': -1.74, 'd1Avg': null, 'd1Avg_x': null, 'd2Avg': null, 'd2Avg_x': null },
+                    { 'd1': -0.46, 'd1_x': -7.15, 'd2': -0.45, 'd2_x': -0.01, 'd1Avg': -0.45, 'd1Avg_x': -4.71, 'd2Avg': 1.19, 'd2Avg_x': -2.64 }
+                ]
+            });
+
+            console.log(targets);
+
+        });
+
+        it('handles falsy values with category X axis', () => {
+            // TODO
+            /*
+            var chart = c3.generate({
+    data: {
+        json: [
+            {name: 'data1',value: 200},
+            {value: 100},
+            {name: 'data3', value: 300},
+            {name: 'data4', value: 400},
+        ],
+
+    keys: {
+            x: 'name',
+            value: ['value'],
+        },
+        type: 'bar'
+    },
+    axis: {
+        x: {
+            type: 'category'
+        }
+    }
+});
+             */
+        });
+
+        it('handles missing values with timseries X axis', () => {
+            // TODO
+            /*
+            {
+    "xs": {
+      "o1": "o1 dates",
+      "o2": "o2 dates",
+      "o3": "o3 dates",
+      "o7": "o7 dates"
+    },
+    "xFormat": "%d/%m/%Y",
+    "columns": [
+  [
+    "o1 dates",
+    "01/01/2019",
+    "02/01/2019",
+    "03/01/2019",
+    "04/01/2019",
+    "05/01/2019",
+    "06/01/2019"
+  ],
+  [
+    "o1",
+    "17",
+    "16",
+    "16",
+    "12",
+    "16",
+    "16"
+  ],
+  [
+    "o2 dates",
+    "01/01/2019",
+    "02/01/2019",
+    "03/01/2019",
+    "04/01/2019",
+    "05/01/2019",
+    "06/01/2019"
+  ],
+  [
+    "o2",
+    "20",
+    "27",
+    "30",
+    "34",
+    "24",
+    "27"
+  ],
+  [
+    "o3 dates",
+    "01/01/2019",
+    "02/01/2019",
+    "03/01/2019",
+    "04/01/2019",
+    "05/01/2019",
+    "06/01/2019"
+  ],
+  [
+    "o3",
+    "14",
+    "19",
+    "22",
+    "13",
+    "19",
+    "18"
+  ],
+  [
+    "o7 dates",
+    "01/01/2019",
+    "02/01/2019",
+    "03/01/2019",
+    "04/01/2019",
+    "06/01/2019"
+  ],
+  [
+    "o7",
+    "4",
+    "6",
+    "4",
+    "5",
+    "5"
+  ]
+],
+    "types": {
+      "o1": "bar",
+      "o2": "bar",
+      "o3": "bar",
+      "o7": "bar"
+    },
+    "colors": {
+      "o1": "rgba(0, 255, 0, 1)",
+      "o2": "rgba(106, 255, 0, 1)",
+      "o3": "rgba(212, 255, 0, 1)",
+      "o7": "rgba(255, 0, 10, 1)"
+    },
+    "axes": {
+      "o1": "y",
+      "o2": "y",
+      "o3": "y",
+      "o7": "y"
+    },
+    "groups": [
+      [
+        "o1",
+        "o2",
+        "o3",
+        "o7"
+      ]
+    ],
+    "order": null,
+    "labels": false
+  }
+             */
+        });
+
     });
 
     describe('$$.convertJsonToData', () => {
