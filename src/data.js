@@ -126,7 +126,7 @@ ChartInternal.prototype.getTotalPerIndex = function(axisId) {
 
     $$.addToCache('getTotalPerIndex', sum);
 
-    return sum[axisId]
+    return sum[axisId];
 };
 
 /**
