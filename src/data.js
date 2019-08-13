@@ -65,7 +65,7 @@ ChartInternal.prototype.isAxisNormalized = function(axisId) {
  * Returns whether the values for this target ID is normalized or not.
  *
  * To be normalized the option needs to be enabled and target needs
- * to be grouped with others.
+ * to be defined in `data.groups`.
  *
  * @param targetId ID of the target
  * @return {Boolean} True if the target is normalized, false otherwise.
