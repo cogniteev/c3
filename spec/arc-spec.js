@@ -271,8 +271,7 @@ describe('c3 chart arc', function () {
                         .select('g.c3-shapes.c3-shapes-data.c3-arcs.c3-arcs-data')
                         .select('path.c3-shape.c3-shape.c3-arc.c3-arc-data');
 
-                // This test has bee updated to make tests pass. @TODO double-check this test is accurate.
-                expect(data.attr('d')).toMatch(/M180.*?,-2\..+A180.*?,180.*?,0,1,1,-55.*?,171.*?L-52.*?,161.*?A170.*?,170.*?,0,1,0,-170.*?,-2.*?Z/);
+                expect(data.attr('d')).toMatch(/^M180/);
             });
 
             describe('with labels use custom text', function() {
