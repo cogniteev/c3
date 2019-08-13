@@ -253,15 +253,14 @@ describe('c3 chart arc', function () {
                         width: 10,
                         max: 10,
                         expand: true,
-                        fullCircle: true
+                        fullCircle: true,
+                        startingAngle: Math.PI/2
                     },
                     data: {
                         columns: [
                             ['data', 8]
                         ],
-                        type: 'gauge',
-                        fullCircle: true,
-                        startingAngle: Math.PI/2
+                        type: 'gauge'
                     }
                 };
             });
@@ -297,9 +296,7 @@ describe('c3 chart arc', function () {
                             columns: [
                                 ['data', 8]
                             ],
-                            type: 'gauge',
-                            fullCircle: true,
-                            startingAngle: Math.PI/2
+                            type: 'gauge'
                         }
                     };
                 });
