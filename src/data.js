@@ -563,8 +563,13 @@ ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
         ratio = d.ratio || d.value;
 
         if (type === "arc") {
-            const total = $$.getTotalDataSum();
-            ratio = total === 0 ? 0 : (d.value / total);
+            if ($$.hasType('gauge')) {
+                ratio = (d.endAngle - d.startAngle) / (Math.PI * ($$.config.gauge_fullCircle ? 2 : 1));
+            } else {
+                const total = $$.getTotalDataSum();
+
+                ratio = d.value / total;
+            }
         } else if (type === "index") {
             const total = $$.getTotalPerIndex($$.axis.getId(d.id));
 
