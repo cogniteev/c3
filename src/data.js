@@ -5,9 +5,11 @@ import {
 import {
     isValue,
     isFunction,
+    isNumber,
     isArray,
     notEmpty,
-    hasValue
+    hasValue,
+    flattenArray
 } from './util';
 
 ChartInternal.prototype.isEpochs = function (key) {
@@ -26,11 +28,136 @@ ChartInternal.prototype.isNotX = function (key) {
 ChartInternal.prototype.isNotXAndNotEpochs = function (key) {
     return !this.isX(key) && !this.isEpochs(key);
 };
+
+/**
+ * Returns whether the normalized stack option is enabled or not.
+ *
+ * To be enabled it must also have data.groups defined.
+ *
+ * @return {boolean}
+ */
+ChartInternal.prototype.isStackNormalized = function() {
+  return this.config.data_stack_normalize && this.config.data_groups.length > 0;
+};
+
+/**
+ * Returns whether the axis is normalized or not.
+ *
+ * An axis is normalized as long as one of its associated target
+ * is normalized.
+ *
+ * @param axisId Axis ID (y or y2)
+ * @return {Boolean}
+ */
+ChartInternal.prototype.isAxisNormalized = function(axisId) {
+    const $$ = this;
+
+    if (!$$.isStackNormalized()) { // shortcut
+        return false;
+    }
+
+    return $$.data.targets
+        .filter((target) => $$.axis.getId(target.id) === axisId)
+        .some((target) => $$.isTargetNormalized(target.id));
+};
+
+/**
+ * Returns whether the values for this target ID is normalized or not.
+ *
+ * To be normalized the option needs to be enabled and target needs
+ * to be defined in `data.groups`.
+ *
+ * @param targetId ID of the target
+ * @return {Boolean} True if the target is normalized, false otherwise.
+ */
+ChartInternal.prototype.isTargetNormalized = function(targetId) {
+    const $$ = this;
+
+    return $$.isStackNormalized() && $$.config.data_groups.some((group) => group.includes(targetId));
+};
+
 ChartInternal.prototype.getXKey = function (id) {
     var $$ = this,
         config = $$.config;
     return config.data_x ? config.data_x : notEmpty(config.data_xs) ? config.data_xs[id] : null;
 };
+
+/**
+ * Get sum of visible data per index for given axis.
+ *
+ * Expect axisId to be either 'y' or 'y2'.
+ *
+ * @private
+ * @param axisId Compute sum for data associated to given axis.
+ * @return {Array}
+ */
+ChartInternal.prototype.getTotalPerIndex = function(axisId) {
+    const $$ = this;
+
+    if (!$$.isStackNormalized()) {
+        return null;
+    }
+
+    const cached = $$.getFromCache('getTotalPerIndex');
+    if (cached !== undefined) {
+        return cached[axisId];
+    }
+
+    const sum = { y: [], y2: [] };
+
+    $$.data.targets
+        // keep only target that are normalized
+        .filter((target) => $$.isTargetNormalized(target.id))
+
+        // keep only target that are visible
+        .filter((target) => $$.isTargetToShow(target.id))
+
+        // compute sum per axis
+        .forEach(target => {
+            const sumByAxis = sum[$$.axis.getId(target.id)];
+
+            target.values.forEach((v, i) => {
+                if (!sumByAxis[i]) {
+                    sumByAxis[i] = 0;
+                }
+                sumByAxis[i] += isNumber(v.value) ? v.value : 0;
+            });
+        });
+
+    $$.addToCache('getTotalPerIndex', sum);
+
+    return sum[axisId];
+};
+
+/**
+ * Get sum of visible data.
+ *
+ * Should be used for normalised data only since all values
+ * are expected to be positive.
+ *
+ * @private
+ * @return {Number}
+ */
+ChartInternal.prototype.getTotalDataSum = function() {
+    const $$ = this;
+
+    const cached = $$.getFromCache('getTotalDataSum');
+    if (cached !== undefined) {
+        return cached;
+    }
+
+    const totalDataSum = flattenArray($$.data.targets
+        .filter(target => $$.isTargetToShow(target.id))
+        .map(target => target.values)
+    )
+        .map(d => d.value)
+        .reduce((p, c) => p + c);
+
+    $$.addToCache('getTotalDataSum', totalDataSum);
+
+    return totalDataSum;
+};
+
 ChartInternal.prototype.getXValuesOfXKey = function (key, targets) {
     var $$ = this,
         xValues, ids = targets && notEmpty(targets) ? $$.mapToIds(targets) : [];
@@ -177,11 +304,13 @@ ChartInternal.prototype.addHiddenTargetIds = function (targetIds) {
             this.hiddenTargetIds = this.hiddenTargetIds.concat(targetIds[i]);
         }
     }
+    this.resetCache();
 };
 ChartInternal.prototype.removeHiddenTargetIds = function (targetIds) {
     this.hiddenTargetIds = this.hiddenTargetIds.filter(function (id) {
         return targetIds.indexOf(id) < 0;
     });
+    this.resetCache();
 };
 ChartInternal.prototype.addHiddenLegendIds = function (targetIds) {
     targetIds = (targetIds instanceof Array) ? targetIds : new Array(targetIds);
@@ -415,6 +544,45 @@ ChartInternal.prototype.convertValuesToStep = function (values) {
 
     return converted;
 };
+
+/**
+ * Get ratio value
+ *
+ * @param {String} type Ratio for given type
+ * @param {Object} d Data value object
+ * @param {Boolean} asPercent Convert the return as percent or not
+ * @return {Number} Ratio value
+ * @private
+ */
+ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
+    const $$ = this;
+    const api = $$.api;
+    let ratio = 0;
+
+    if (d && api.data.shown.call(api).length) {
+        ratio = d.ratio || d.value;
+
+        if (type === "arc") {
+            if ($$.hasType('gauge')) {
+                ratio = (d.endAngle - d.startAngle) / (Math.PI * ($$.config.gauge_fullCircle ? 2 : 1));
+            } else {
+                const total = $$.getTotalDataSum();
+
+                ratio = d.value / total;
+            }
+        } else if (type === "index") {
+            const total = $$.getTotalPerIndex($$.axis.getId(d.id));
+
+            d.ratio = isNumber(d.value) && total && total[d.index] > 0 ?
+                d.value / total[d.index] : 0;
+
+            ratio = d.ratio;
+        }
+    }
+
+    return asPercent && ratio ? ratio * 100 : ratio;
+};
+
 ChartInternal.prototype.updateDataAttributes = function (name, attrs) {
     var $$ = this,
         config = $$.config,

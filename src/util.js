@@ -36,6 +36,9 @@ export var isEmpty = function(o) {
 export var isFunction = function(o) {
     return typeof o === 'function';
 };
+export var isNumber = function(o) {
+    return typeof o === 'number';
+};
 export var isString = function(o) {
     return typeof o === 'string';
 };
@@ -50,4 +53,7 @@ export var notEmpty = function(o) {
 };
 export var sanitise = function(str) {
     return typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
+};
+export var flattenArray = function(arr) {
+    return Array.isArray(arr) ? [].concat(...arr) : [];
 };
