@@ -309,50 +309,59 @@ Axis.prototype.textAnchorForY2AxisLabel = function textAnchorForY2AxisLabel() {
     var $$ = this.owner;
     return this.textAnchorForAxisLabel($$.config.axis_rotated, this.getY2AxisLabelPosition());
 };
-Axis.prototype.getMaxTickBox = function getMaxTickWidth(id, withoutRecompute) {
+Axis.prototype.getMaxTickBox = function getMaxTickWidth(id) {
     var $$ = this.owner,
         targetsToShow, scale, axis, dummy, svg;
 
-    if (withoutRecompute && $$.currentMaxTickBoxes[id]) {
-        return $$.currentMaxTickBoxes[id];
+    const cacheKey = `MaxTickBox(${id})`;
+
+    // return cached value if any
+    const cachedMaxTickBox = $$.getFromCache(cacheKey);
+    if (cachedMaxTickBox !== undefined) {
+        return cachedMaxTickBox;
     }
 
-    var maxBox = { height: 0, width: 0 };
+    let maxBox = { height: 0, width: 0 };
 
-    if ($$.svg) {
-        targetsToShow = $$.filterTargetsToShow($$.data.targets);
-        if (id === 'y') {
-            scale = $$.y.copy().domain($$.getYDomain(targetsToShow, 'y'));
-            axis = this.getYAxis(id, scale, $$.yOrient, $$.yAxisTickValues, false, true, true);
-        } else if (id === 'y2') {
-            scale = $$.y2.copy().domain($$.getYDomain(targetsToShow, 'y2'));
-            axis = this.getYAxis(id, scale, $$.y2Orient, $$.y2AxisTickValues, false, true, true);
-        } else {
-            scale = $$.x.copy().domain($$.getXDomain(targetsToShow));
-            axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
-            this.updateXAxisTickValues(targetsToShow, axis);
-        }
-        dummy = $$.d3.select('body').append('div').classed('c3', true);
-        svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0),
-            svg.append('g').call(axis).each(function () {
-                $$.d3.select(this).selectAll('text').each(function () {
-                    var box = this.getBBox();
-                    maxBox.width = Math.max(maxBox.width, box.width);
-                    maxBox.height = Math.max(maxBox.height, box.height);
-                });
-                dummy.remove();
+    // bypass if SVG not rendered yet
+    if (!$$.svg) {
+        return maxBox;
+    }
+
+    targetsToShow = $$.filterTargetsToShow($$.data.targets);
+    if (id === 'y') {
+        scale = $$.y.copy().domain($$.getYDomain(targetsToShow, 'y'));
+        axis = this.getYAxis(id, scale, $$.yOrient, $$.yAxisTickValues, false, true, true);
+    } else if (id === 'y2') {
+        scale = $$.y2.copy().domain($$.getYDomain(targetsToShow, 'y2'));
+        axis = this.getYAxis(id, scale, $$.y2Orient, $$.y2AxisTickValues, false, true, true);
+    } else {
+        scale = $$.x.copy().domain($$.getXDomain(targetsToShow));
+        axis = this.getXAxis(scale, $$.xOrient, $$.xAxisTickFormat, $$.xAxisTickValues, false, true, true);
+        this.updateXAxisTickValues(targetsToShow, axis);
+    }
+    dummy = $$.d3.select('body').append('div').classed('c3', true);
+    svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0),
+        svg.append('g').call(axis).each(function () {
+            $$.d3.select(this).selectAll('text').each(function () {
+                var box = this.getBBox();
+                maxBox.width = Math.max(maxBox.width, box.width);
+                maxBox.height = Math.max(maxBox.height, box.height);
             });
-    }
-    $$.currentMaxTickBoxes[id] = maxBox;
-    return $$.currentMaxTickBoxes[id];
+            dummy.remove();
+        });
+
+    $$.addToCache(cacheKey, maxBox);
+
+    return maxBox;
 };
 
-Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id, withoutRecompute) {
-    return this.getMaxTickBox(id, withoutRecompute).width;
+Axis.prototype.getMaxTickWidth = function getMaxTickWidth(id) {
+    return this.getMaxTickBox(id).width;
 };
 
-Axis.prototype.getMaxTickHeight = function getMaxTickHeight(id, withoutRecompute) {
-    return this.getMaxTickBox(id, withoutRecompute).height;
+Axis.prototype.getMaxTickHeight = function getMaxTickHeight(id) {
+    return this.getMaxTickBox(id).height;
 };
 
 Axis.prototype.updateLabels = function updateLabels(withTransition) {

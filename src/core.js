@@ -138,8 +138,6 @@ ChartInternal.prototype.initParams = function() {
     $$.legendItemWidth = 0;
     $$.legendItemHeight = 0;
 
-    $$.currentMaxTickBoxes = {};
-
     $$.rotated_padding_left = 30;
     $$.rotated_padding_right = config.axis_rotated && !config.axis_x_show ? 0 : 30;
     $$.rotated_padding_top = 5;
@@ -525,6 +523,9 @@ ChartInternal.prototype.redraw = function(options, transitions) {
     duration = withTransition ? config.transition_duration : 0;
     durationForExit = withTransitionForExit ? duration : 0;
     durationForAxis = withTransitionForAxis ? duration : 0;
+
+    // reset caches when we are re-drawing the chart
+    $$.resetCache();
 
     transitions = transitions || $$.axis.generateTransitions(durationForAxis);
 
