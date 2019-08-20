@@ -529,6 +529,118 @@ describe('c3 chart interaction', function () {
         });
     });
 
+    describe('area chart (timeseries)', function() {
+        describe('tooltip_grouped=true', function() {
+            beforeAll(() => {
+                args = {
+                    data: {
+                        x: 'x',
+                        columns: [
+                            [ 'x', '2018-01-01', '2018-01-02', '2018-01-03', '2018-01-04', '2018-01-05', '2018-01-06'],
+                            [ 'data1', 30, 200, 200, 400, 150, 250 ],
+                            [ 'data2', 130, 100, 100, 200, 150, 50 ],
+                            [ 'data3', 230, 200, 200, 0, 250, 250 ]
+                        ],
+                        type: 'area',
+                        groups: [
+                            [ 'data1', 'data2', 'data3' ]
+                        ]
+                    },
+                    tooltip: {
+                        grouped: true
+                    },
+                    axis: {
+                        x: {
+                            type: 'timeseries'
+                        }
+                    },
+                    interaction: {
+                        enabled: true
+                    }
+                };
+            });
+
+            it('shows tooltip with visible data of currently hovered category', () => {
+                moveMouse(20, 20);
+
+                expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+                const tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+                expect(tooltipData.length).toBe(4); // header + data[123]
+
+                expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+                expect(tooltipData[2].querySelector('.name').textContent).toBe('data3');
+                expect(tooltipData[3].querySelector('.name').textContent).toBe('data2');
+            });
+
+            it('shows cursor:pointer only if hovering area', () => {
+                const eventRect = d3.select('.c3-event-rect');
+
+                moveMouse(1, 1);
+
+                expect(eventRect.style('cursor')).toEqual('auto');
+
+                moveMouse(360, 48);
+
+                expect(eventRect.style('cursor')).toEqual('pointer');
+
+                moveMouse(1, 1);
+
+                expect(eventRect.style('cursor')).toEqual('auto');
+            });
+        });
+
+        describe('tooltip_grouped=false', function() {
+            beforeAll(() => {
+                args = {
+                    data: {
+                        x: 'x',
+                        columns: [
+                            [ 'x', '2018-01-01', '2018-01-02', '2018-01-03', '2018-01-04', '2018-01-05', '2018-01-06'],
+                            [ 'data1', 30, 200, 200, 400, 150, 250 ],
+                            [ 'data2', 130, 100, 100, 200, 150, 50 ],
+                            [ 'data3', 230, 200, 200, 0, 250, 250 ]
+                        ],
+                        type: 'area',
+                        groups: [
+                            [ 'data1', 'data2', 'data3' ]
+                        ]
+                    },
+                    tooltip: {
+                        grouped: false
+                    },
+                    axis: {
+                        x: {
+                            type: 'timeseries'
+                        },
+                        rotated: false
+                    },
+                    interaction: {
+                        enabled: true
+                    }
+                };
+            });
+
+            it('shows tooltip with only hovered data', () => {
+                moveMouse(1, 1);
+
+                expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('none');
+
+                moveMouse(5, 174);
+
+                expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+                const tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+                expect(tooltipData.length).toBe(2); // header + data1
+
+                expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+                expect(tooltipData[1].querySelector('.value').textContent).toBe('30');
+            });
+        });
+    });
+
     describe('disabled', function() {
         beforeAll(() => {
             args = {
