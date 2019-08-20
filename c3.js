@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.3 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.4 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -93,6 +93,92 @@
       });
     })(Chart.prototype, this, this);
   }
+
+  var asHalfPixel = function asHalfPixel(n) {
+    return Math.ceil(n) + 0.5;
+  };
+  var ceil10 = function ceil10(v) {
+    return Math.ceil(v / 10) * 10;
+  };
+  var diffDomain = function diffDomain(d) {
+    return d[1] - d[0];
+  };
+  var getOption = function getOption(options, key, defaultValue) {
+    return isDefined(options[key]) ? options[key] : defaultValue;
+  };
+  var getPathBox = function getPathBox(path) {
+    var box = getBBox(path),
+        items = [path.pathSegList.getItem(0), path.pathSegList.getItem(1)],
+        minX = items[0].x,
+        minY = Math.min(items[0].y, items[1].y);
+    return {
+      x: minX,
+      y: minY,
+      width: box.width,
+      height: box.height
+    };
+  };
+  var getBBox = function getBBox(element) {
+    try {
+      return element.getBBox();
+    } catch (ignore) {
+      // Firefox will throw an exception if getBBox() is called whereas the
+      // element is rendered with display:none
+      // See https://github.com/c3js/c3/issues/2692
+      // The previous code was using `getBoundingClientRect` which was returning
+      // everything at 0 in this case so let's reproduce this behavior here.
+      return {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0
+      };
+    }
+  };
+  var hasValue = function hasValue(dict, value) {
+    var found = false;
+    Object.keys(dict).forEach(function (key) {
+      if (dict[key] === value) {
+        found = true;
+      }
+    });
+    return found;
+  };
+  var isArray = function isArray(o) {
+    return Array.isArray(o);
+  };
+  var isDefined = function isDefined(v) {
+    return typeof v !== 'undefined';
+  };
+  var isEmpty = function isEmpty(o) {
+    return typeof o === 'undefined' || o === null || isString(o) && o.length === 0 || _typeof(o) === 'object' && Object.keys(o).length === 0;
+  };
+  var isFunction = function isFunction(o) {
+    return typeof o === 'function';
+  };
+  var isNumber = function isNumber(o) {
+    return typeof o === 'number';
+  };
+  var isString = function isString(o) {
+    return typeof o === 'string';
+  };
+  var isUndefined = function isUndefined(v) {
+    return typeof v === 'undefined';
+  };
+  var isValue = function isValue(v) {
+    return v || v === 0;
+  };
+  var notEmpty = function notEmpty(o) {
+    return !isEmpty(o);
+  };
+  var sanitise = function sanitise(str) {
+    return typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
+  };
+  var flattenArray = function flattenArray(arr) {
+    var _ref;
+
+    return Array.isArray(arr) ? (_ref = []).concat.apply(_ref, _toConsumableArray(arr)) : [];
+  };
 
   function AxisInternal(component, params) {
     var internal = this;
@@ -197,7 +283,7 @@
     tick.select('text').text(function (d) {
       return internal.textFormatted(d);
     }).each(function (d) {
-      var box = this.getBBox(),
+      var box = getBBox(this),
           text = internal.textFormatted(d),
           h = box.height,
           w = text ? box.width / text.length : undefined;
@@ -660,75 +746,6 @@
     INCLUDED: '_included_'
   };
 
-  var asHalfPixel = function asHalfPixel(n) {
-    return Math.ceil(n) + 0.5;
-  };
-  var ceil10 = function ceil10(v) {
-    return Math.ceil(v / 10) * 10;
-  };
-  var diffDomain = function diffDomain(d) {
-    return d[1] - d[0];
-  };
-  var getOption = function getOption(options, key, defaultValue) {
-    return isDefined(options[key]) ? options[key] : defaultValue;
-  };
-  var getPathBox = function getPathBox(path) {
-    var box = path.getBBox(),
-        items = [path.pathSegList.getItem(0), path.pathSegList.getItem(1)],
-        minX = items[0].x,
-        minY = Math.min(items[0].y, items[1].y);
-    return {
-      x: minX,
-      y: minY,
-      width: box.width,
-      height: box.height
-    };
-  };
-  var hasValue = function hasValue(dict, value) {
-    var found = false;
-    Object.keys(dict).forEach(function (key) {
-      if (dict[key] === value) {
-        found = true;
-      }
-    });
-    return found;
-  };
-  var isArray = function isArray(o) {
-    return Array.isArray(o);
-  };
-  var isDefined = function isDefined(v) {
-    return typeof v !== 'undefined';
-  };
-  var isEmpty = function isEmpty(o) {
-    return typeof o === 'undefined' || o === null || isString(o) && o.length === 0 || _typeof(o) === 'object' && Object.keys(o).length === 0;
-  };
-  var isFunction = function isFunction(o) {
-    return typeof o === 'function';
-  };
-  var isNumber = function isNumber(o) {
-    return typeof o === 'number';
-  };
-  var isString = function isString(o) {
-    return typeof o === 'string';
-  };
-  var isUndefined = function isUndefined(v) {
-    return typeof v === 'undefined';
-  };
-  var isValue = function isValue(v) {
-    return v || v === 0;
-  };
-  var notEmpty = function notEmpty(o) {
-    return !isEmpty(o);
-  };
-  var sanitise = function sanitise(str) {
-    return typeof str === 'string' ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : str;
-  };
-  var flattenArray = function flattenArray(arr) {
-    var _ref;
-
-    return Array.isArray(arr) ? (_ref = []).concat.apply(_ref, _toConsumableArray(arr)) : [];
-  };
-
   var Axis = function Axis(owner) {
     _classCallCheck(this, Axis);
 
@@ -1100,7 +1117,7 @@
     dummy = $$.d3.select('body').append('div').classed('c3', true);
     svg = dummy.append("svg").style('visibility', 'hidden').style('position', 'fixed').style('top', 0).style('left', 0), svg.append('g').call(axis).each(function () {
       $$.d3.select(this).selectAll('text').each(function () {
-        var box = this.getBBox();
+        var box = getBBox(this);
         maxBox.width = Math.max(maxBox.width, box.width);
         maxBox.height = Math.max(maxBox.height, box.height);
       });
@@ -1213,7 +1230,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.3",
+    version: "0.7.4-patch.4",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -7414,6 +7431,22 @@
 
     return targets;
   };
+  /**
+   * Returns all the values from the given targets at the given index.
+   *
+   * @param {Array} targets
+   * @param {Number} index
+   * @return {Array}
+   */
+
+
+  ChartInternal.prototype.filterByIndex = function (targets, index) {
+    return this.d3.merge(targets.map(function (t) {
+      return t.values.filter(function (v) {
+        return v.index === index;
+      });
+    }));
+  };
 
   ChartInternal.prototype.filterByX = function (targets, x) {
     return this.d3.merge(targets.map(function (t) {
@@ -7460,7 +7493,7 @@
     $$.selectChart.select('svg').selectAll('.dummy').data([min, max]).enter().append('text').text(function (d) {
       return $$.dataLabelFormat(d.id)(d);
     }).each(function (d, i) {
-      lengths[i] = this.getBBox()[key] * paddingCoef;
+      lengths[i] = getBBox(this)[key] * paddingCoef;
     }).remove();
     return lengths;
   };
@@ -7851,7 +7884,6 @@
         yDomainMax = $$.getYDomainMax(yTargets),
         domain,
         domainLength,
-        padding,
         padding_top,
         padding_bottom,
         center = axisId === 'y2' ? config.axis_y2_center : config.axis_y_center,
@@ -7907,7 +7939,7 @@
     }
 
     domainLength = Math.abs(yDomainMax - yDomainMin);
-    padding = padding_top = padding_bottom = domainLength * 0.1;
+    padding_top = padding_bottom = domainLength * 0.1;
 
     if (typeof center !== 'undefined') {
       yDomainAbs = Math.max(Math.abs(yDomainMin), Math.abs(yDomainMax));
@@ -7924,8 +7956,11 @@
       padding_bottom += domainLength * (ratio[0] / (1 - ratio[0] - ratio[1]));
     } else if (showVerticalDataLabel) {
       lengths = $$.getDataLabelLength(yDomainMin, yDomainMax, 'height');
-      padding_top += $$.axis.convertPixelsToAxisPadding(lengths[1], domainLength);
-      padding_bottom += $$.axis.convertPixelsToAxisPadding(lengths[0], domainLength);
+      var pixelsToAxisPadding = $$.getY(config["axis_".concat(axisId, "_type")], // input domain as pixels
+      [0, config.axis_rotated ? $$.width : $$.height], // output range as axis padding
+      [0, domainLength]);
+      padding_top += pixelsToAxisPadding(lengths[1]);
+      padding_bottom += pixelsToAxisPadding(lengths[0]);
     }
 
     if (axisId === 'y' && notEmpty(config.axis_y_padding)) {
@@ -8621,7 +8656,7 @@
         selectedData = [closest];
       } else {
         var mouseX = config.axis_rotated ? mouse[1] : mouse[0];
-        selectedData = $$.filterByX(targetsToShow, xEventScale(mouseX));
+        selectedData = $$.filterByIndex(targetsToShow, xEventScale(mouseX));
       } // inject names for each point
 
 
@@ -9322,7 +9357,7 @@
     return scale;
   };
 
-  ChartInternal.prototype.getY = function (type, range, domain) {
+  ChartInternal.prototype.getY = function (type, domain, range) {
     var scale;
 
     if (type === 'timeseries' || type === 'time') {
@@ -9371,13 +9406,13 @@
     $$.x = $$.getX($$.xMin, $$.xMax, forInit ? undefined : $$.x.orgDomain(), function () {
       return $$.xAxis.tickOffset();
     });
-    $$.y = $$.getY(config.axis_y_type, [$$.yMin, $$.yMax], forInit ? config.axis_y_default : $$.y.domain());
-    $$.y2 = $$.getY(config.axis_y2_type, [$$.yMin, $$.yMax], forInit ? config.axis_y2_default : $$.y2.domain());
+    $$.y = $$.getY(config.axis_y_type, forInit ? config.axis_y_default : $$.y.domain(), [$$.yMin, $$.yMax]);
+    $$.y2 = $$.getY(config.axis_y2_type, forInit ? config.axis_y2_default : $$.y2.domain(), [$$.yMin, $$.yMax]);
     $$.subX = $$.getX($$.xMin, $$.xMax, $$.orgXDomain, function (d) {
       return d % 1 ? 0 : $$.subXAxis.tickOffset();
     });
-    $$.subY = $$.getY(config.axis_y_type, [$$.subYMin, $$.subYMax], forInit ? config.axis_y_default : $$.subY.domain());
-    $$.subY2 = $$.getY(config.axis_y2_type, [$$.subYMin, $$.subYMax], forInit ? config.axis_y2_default : $$.subY2.domain()); // update axes
+    $$.subY = $$.getY(config.axis_y_type, forInit ? config.axis_y_default : $$.subY.domain(), [$$.subYMin, $$.subYMax]);
+    $$.subY2 = $$.getY(config.axis_y2_type, forInit ? config.axis_y2_default : $$.subY2.domain(), [$$.subYMin, $$.subYMax]); // update axes
 
     $$.xAxisTickFormat = $$.axis.getXAxisTickFormat();
     $$.xAxisTickValues = $$.axis.getXAxisTickValues();
@@ -9615,7 +9650,7 @@
       return false;
     }
 
-    var box = that.getBBox(),
+    var box = getBBox(that),
         seg0 = that.pathSegList.getItem(0),
         seg1 = that.pathSegList.getItem(1),
         x = Math.min(seg0.x, seg1.x),
@@ -10128,7 +10163,7 @@
   ChartInternal.prototype.updateCircle = function (cx, cy) {
     var $$ = this;
     var mainCircle = $$.main.selectAll('.' + CLASS.circles).selectAll('.' + CLASS.circle).data($$.lineOrScatterOrStanfordData.bind($$));
-    var mainCircleEnter = mainCircle.enter().append("circle").attr('shape-rendering', $$.isStanfordGraphType() ? 'crispEdges' : '').attr("class", $$.classCircle.bind($$)).attr("cx", cx).attr("cy", cy).attr("r", $$.pointR.bind($$)).style("fill", $$.isStanfordGraphType() ? $$.getStanfordPointColor.bind($$) : $$.color);
+    var mainCircleEnter = mainCircle.enter().append("circle").attr('shape-rendering', $$.isStanfordGraphType() ? 'crispEdges' : '').attr("class", $$.classCircle.bind($$)).attr("cx", cx).attr("cy", cy).attr("r", $$.pointR.bind($$)).style("color", $$.isStanfordGraphType() ? $$.getStanfordPointColor.bind($$) : $$.color);
     $$.mainCircle = mainCircleEnter.merge(mainCircle).style("opacity", $$.isStanfordGraphType() ? 1 : $$.initialOpacityForCircle.bind($$));
     mainCircle.exit().style("opacity", 0);
   };
@@ -10136,7 +10171,7 @@
   ChartInternal.prototype.redrawCircle = function (cx, cy, withTransition, transition) {
     var $$ = this,
         selectedCircles = $$.main.selectAll('.' + CLASS.selectedCircle);
-    return [(withTransition ? $$.mainCircle.transition(transition) : $$.mainCircle).style('opacity', this.opacityForCircle.bind($$)).style("fill", $$.isStanfordGraphType() ? $$.getStanfordPointColor.bind($$) : $$.color).attr("cx", cx).attr("cy", cy), (withTransition ? selectedCircles.transition(transition) : selectedCircles).attr("cx", cx).attr("cy", cy)];
+    return [(withTransition ? $$.mainCircle.transition(transition) : $$.mainCircle).style('opacity', this.opacityForCircle.bind($$)).style("color", $$.isStanfordGraphType() ? $$.getStanfordPointColor.bind($$) : $$.color).attr("cx", cx).attr("cy", cy), (withTransition ? selectedCircles.transition(transition) : selectedCircles).attr("cx", cx).attr("cy", cy)];
   };
 
   ChartInternal.prototype.circleX = function (d) {
@@ -10690,7 +10725,8 @@
       return $$.color(d);
     }).style("fill-opacity", 0);
     $$.mainText = mainTextEnter.merge(mainText).text(function (d, i, j) {
-      return $$.dataLabelFormat(d.id)(d.value, d.id, i, j);
+      var ratio = $$.isTargetNormalized(d.id) ? $$.getRatio('index', d) : undefined;
+      return $$.dataLabelFormat(d.id).call($$.api, d.value, ratio, d.id, i, j);
     });
     mainText.exit().transition().duration(durationForExit).style('fill-opacity', 0).remove();
   };
@@ -10705,7 +10741,7 @@
         font = this.d3.select(element).style('font'),
         rect;
     svg.selectAll('.dummy').data([text]).enter().append('text').classed(cls ? cls : "", true).style('font', font).text(text).each(function () {
-      rect = this.getBBox();
+      rect = getBBox(this);
     });
     dummy.remove();
     return rect;
@@ -10725,7 +10761,7 @@
 
   ChartInternal.prototype.getXForText = function (points, d, textElement) {
     var $$ = this,
-        box = textElement.getBBox(),
+        box = getBBox(textElement),
         xPos,
         padding;
 
@@ -10750,7 +10786,7 @@
 
   ChartInternal.prototype.getYForText = function (points, d, textElement) {
     var $$ = this,
-        box = textElement.getBBox(),
+        box = getBBox(textElement),
         yPos;
 
     if ($$.config.axis_rotated) {
@@ -10890,7 +10926,7 @@
 
   ChartInternal.prototype.xForColorScale = function () {
     var $$ = this;
-    return $$.config.stanford_padding.right + $$.colorScale.node().getBBox().width;
+    return $$.config.stanford_padding.right + getBBox($$.colorScale.node()).width;
   };
 
   ChartInternal.prototype.getColorScalePadding = function () {
