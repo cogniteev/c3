@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.4 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.5 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -178,6 +178,22 @@
     var _ref;
 
     return Array.isArray(arr) ? (_ref = []).concat.apply(_ref, _toConsumableArray(arr)) : [];
+  };
+  /**
+   * Returns whether the point is within the given box.
+   *
+   * @param {Array} point An [x,y] coordinate
+   * @param {Object} box An object with {x, y, width, height} keys
+   * @param {Number} sensitivity An offset to ease check on very small boxes
+   */
+
+  var isWithinBox = function isWithinBox(point, box) {
+    var sensitivity = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+    var xStart = box.x - sensitivity;
+    var xEnd = box.x + box.width + sensitivity;
+    var yStart = box.y + box.height + sensitivity;
+    var yEnd = box.y - sensitivity;
+    return xStart < point[0] && point[0] < xEnd && yEnd < point[1] && point[1] < yStart;
   };
 
   function AxisInternal(component, params) {
@@ -1230,7 +1246,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.4",
+    version: "0.7.4-patch.5",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -7517,37 +7533,68 @@
   ChartInternal.prototype.isArc = function (d) {
     return 'data' in d && this.hasTarget(this.data.targets, d.data.id);
   };
+  /**
+   * Find the closest point from the given pos among the given targets or
+   * undefined if none satisfies conditions.
+   *
+   * @param {Array} targets
+   * @param {Array} pos An [x,y] coordinate
+   * @return {Object|undefined}
+   */
+
 
   ChartInternal.prototype.findClosestFromTargets = function (targets, pos) {
-    var $$ = this,
-        candidates; // map to array of closest points of each target
+    var $$ = this; // for each target, find the closest point
 
-    candidates = targets.map(function (target) {
-      return $$.findClosest(target.values, pos);
-    }); // decide closest point and return
+    var candidates = targets.map(function (t) {
+      return $$.findClosest(t.values, pos, $$.config.tooltip_horizontal ? $$.horizontalDistance.bind($$) : $$.dist.bind($$), $$.config.point_sensitivity);
+    }).filter(function (v) {
+      return v;
+    }); // returns the closest of candidates
 
-    return $$.findClosest(candidates, pos);
+    if (candidates.length === 0) {
+      return undefined;
+    } else if (candidates.length === 1) {
+      return candidates[0];
+    } else {
+      return $$.findClosest(candidates, pos, $$.dist.bind($$));
+    }
   };
+  /**
+   * Using given compute distance method, returns the closest data point from the
+   * given position.
+   *
+   * Giving optionally a minimum distance to satisfy.
+   *
+   * @param {Array} dataPoints List of DataPoints
+   * @param {Array} pos An [x,y] coordinate
+   * @param {Function} computeDist Function to compute distance between 2 points
+   * @param {Number} minDist Minimal distance to satisfy
+   * @return {Object|undefined} Closest data point
+   */
 
-  ChartInternal.prototype.findClosest = function (values, pos) {
-    var $$ = this,
-        minDist = $$.config.point_sensitivity,
-        closest; // find mouseovering bar
 
-    values.filter(function (v) {
+  ChartInternal.prototype.findClosest = function (dataPoints, pos, computeDist) {
+    var minDist = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : Infinity;
+    var $$ = this;
+    var closest; // find closest bar
+
+    dataPoints.filter(function (v) {
       return v && $$.isBarType(v.id);
     }).forEach(function (v) {
-      var shape = $$.main.select('.' + CLASS.bars + $$.getTargetSelectorSuffix(v.id) + ' .' + CLASS.bar + '-' + v.index).node();
+      if (!closest) {
+        var shape = $$.main.select('.' + CLASS.bars + $$.getTargetSelectorSuffix(v.id) + ' .' + CLASS.bar + '-' + v.index).node();
 
-      if (!closest && $$.isWithinBar($$.d3.mouse(shape), shape)) {
-        closest = v;
+        if ($$.isWithinBar(pos, shape)) {
+          closest = v;
+        }
       }
     }); // find closest point from non-bar
 
-    values.filter(function (v) {
+    dataPoints.filter(function (v) {
       return v && !$$.isBarType(v.id);
     }).forEach(function (v) {
-      var d = $$.config.tooltip_horizontal ? $$.horizontalDistance(v, pos) : $$.dist(v, pos);
+      var d = computeDist(v, pos);
 
       if (d < minDist) {
         minDist = d;
@@ -9644,25 +9691,17 @@
       return [[posX + barSpaceOffset, offset], [posX + barSpaceOffset, posY], [posX + barW - barSpaceOffset, posY], [posX + barW - barSpaceOffset, offset]];
     };
   };
+  /**
+   * Returns whether the data point is within the given bar shape.
+   *
+   * @param mouse
+   * @param barShape
+   * @return {boolean}
+   */
 
-  ChartInternal.prototype.isWithinBar = function (mouse, that) {
-    if (that.pathSegList.numberOfItems < 2) {
-      return false;
-    }
 
-    var box = getBBox(that),
-        seg0 = that.pathSegList.getItem(0),
-        seg1 = that.pathSegList.getItem(1),
-        x = Math.min(seg0.x, seg1.x),
-        y = Math.min(seg0.y, seg1.y),
-        w = box.width,
-        h = box.height,
-        offset = 2,
-        sx = x - offset,
-        ex = x + w + offset,
-        sy = y + h + offset,
-        ey = y - offset;
-    return sx < mouse[0] && mouse[0] < ex && ey < mouse[1] && mouse[1] < sy;
+  ChartInternal.prototype.isWithinBar = function (mouse, barShape) {
+    return isWithinBox(mouse, getBBox(barShape), 2);
   };
 
   ChartInternal.prototype.getShapeIndices = function (typeFilter) {
