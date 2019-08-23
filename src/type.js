@@ -12,7 +12,14 @@ ChartInternal.prototype.setTargetType = function (targetIds, type) {
     }
 };
 ChartInternal.prototype.hasType = function (type, targets) {
-    var $$ = this, types = $$.config.data_types, has = false;
+    const $$ = this;
+
+    // fix issue when called while destroying
+    if (!$$.config) {
+        return false;
+    }
+
+    var types = $$.config.data_types, has = false;
     targets = targets || $$.data.targets;
     if (targets && targets.length) {
         targets.forEach(function (target) {
