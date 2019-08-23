@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.5 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.6 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -1246,7 +1246,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.5",
+    version: "0.7.4-patch.6",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -8691,7 +8691,7 @@
 
       $$.svg.select('.' + CLASS.eventRect).style('cursor', isMouseCloseToDataPoint ? 'pointer' : null); // if tooltip not grouped, we want to display only data from closest data point
 
-      var showSingleDataPoint = !config.tooltip_grouped || $$.hasScatterOrStanfordType(targetsToShow); // find data to highlight
+      var showSingleDataPoint = !config.tooltip_grouped || $$.hasType('stanford', targetsToShow); // find data to highlight
 
       var selectedData;
 
@@ -8742,7 +8742,7 @@
 
       var sameXData;
 
-      if (!config.data_selection_grouped || $$.isScatterOrStanfordType(closest)) {
+      if (!config.data_selection_grouped || $$.isStanfordType(closest)) {
         sameXData = [closest];
       } else {
         sameXData = $$.filterByX(targetsToShow, closest.x);
@@ -11497,8 +11497,13 @@
   };
 
   ChartInternal.prototype.hasType = function (type, targets) {
-    var $$ = this,
-        types = $$.config.data_types,
+    var $$ = this; // fix issue when called while destroying
+
+    if (!$$.config) {
+      return false;
+    }
+
+    var types = $$.config.data_types,
         has = false;
     targets = targets || $$.data.targets;
 
@@ -11525,10 +11530,6 @@
 
   ChartInternal.prototype.hasArcType = function (targets) {
     return this.hasType('pie', targets) || this.hasType('donut', targets) || this.hasType('gauge', targets);
-  };
-
-  ChartInternal.prototype.hasScatterOrStanfordType = function (targets) {
-    return this.hasType('scatter', targets) || this.hasType('stanford', targets);
   };
 
   ChartInternal.prototype.isLineType = function (d) {
@@ -11565,10 +11566,6 @@
   ChartInternal.prototype.isStanfordType = function (d) {
     var id = isString(d) ? d : d.id;
     return this.config.data_types[id] === 'stanford';
-  };
-
-  ChartInternal.prototype.isScatterOrStanfordType = function (d) {
-    return this.isScatterType(d) || this.isStanfordType(d);
   };
 
   ChartInternal.prototype.isPieType = function (d) {
