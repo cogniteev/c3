@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.7 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.8 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -1246,7 +1246,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.7",
+    version: "0.7.4-patch.8",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -6011,7 +6011,7 @@
    */
 
   ChartInternal.prototype.addToCache = function (key, value) {
-    this.cache[key] = value;
+    this.cache["$".concat(key)] = value;
   };
   /**
    * Returns a cached value or undefined
@@ -6022,7 +6022,7 @@
 
 
   ChartInternal.prototype.getFromCache = function (key) {
-    return this.cache[key];
+    return this.cache["$".concat(key)];
   };
   /**
    * Reset cached data
@@ -7660,6 +7660,11 @@
   ChartInternal.prototype.getRatio = function (type, d) {
     var asPercent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
     var $$ = this;
+
+    if (!d) {
+      return 0;
+    }
+
     var ratio;
 
     if (type === 'arc') {
