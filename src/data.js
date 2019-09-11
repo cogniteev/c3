@@ -607,10 +607,6 @@ ChartInternal.prototype.convertValuesToStep = function (values) {
 
     return converted;
 };
-
-
-window.getRatioCalled = 0;
-
 /**
  * Get ratio value
  *
@@ -622,8 +618,6 @@ window.getRatioCalled = 0;
  */
 ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
     const $$ = this;
-
-    window.getRatioCalled += 1;
 
     let ratio;
     if (type === 'arc') {
