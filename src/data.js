@@ -627,9 +627,13 @@ ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
             ratio = d.value / $$.getTotalDataSum();
         }
     } else if (type === 'index') {
-        const total = $$.getTotalPerIndex($$.axis.getId(d.id));
-        if (total && total[d.index] > 0 && isNumber(d.value)) {
-            ratio = d.value / total[d.index];
+        if (isNumber(d.value)) {
+            const total = $$.getTotalPerIndex($$.axis.getId(d.id));
+            if (total && total[d.index] > 0) {
+                ratio = d.value / total[d.index];
+            } else {
+                ratio = 0;
+            }
         } else {
             ratio = 0;
         }
