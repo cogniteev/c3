@@ -20,7 +20,7 @@ import {
 } from './util';
 
 var c3 = {
-    version: "0.7.4-patch.6",
+    version: "0.7.4-patch.7",
     chart: {
         fn: Chart.prototype,
         internal: {

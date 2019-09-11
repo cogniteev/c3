@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.6 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.7 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -1246,7 +1246,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.6",
+    version: "0.7.4-patch.7",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -6011,7 +6011,7 @@
    */
 
   ChartInternal.prototype.addToCache = function (key, value) {
-    this.cache["$".concat(key)] = value;
+    this.cache[key] = value;
   };
   /**
    * Returns a cached value or undefined
@@ -6022,7 +6022,7 @@
 
 
   ChartInternal.prototype.getFromCache = function (key) {
-    return this.cache["$".concat(key)];
+    return this.cache[key];
   };
   /**
    * Reset cached data
@@ -7076,7 +7076,7 @@
       return null;
     }
 
-    var cached = $$.getFromCache('getTotalPerIndex');
+    var cached = $$.getFromCache('$getTotalPerIndex');
 
     if (cached !== undefined) {
       return cached[axisId];
@@ -7103,7 +7103,7 @@
         sumByAxis[i] += isNumber(v.value) ? v.value : 0;
       });
     });
-    $$.addToCache('getTotalPerIndex', sum);
+    $$.addToCache('$getTotalPerIndex', sum);
     return sum[axisId];
   };
   /**
@@ -7119,7 +7119,7 @@
 
   ChartInternal.prototype.getTotalDataSum = function () {
     var $$ = this;
-    var cached = $$.getFromCache('getTotalDataSum');
+    var cached = $$.getFromCache('$getTotalDataSum');
 
     if (cached !== undefined) {
       return cached;
@@ -7134,7 +7134,7 @@
     }).reduce(function (p, c) {
       return p + c;
     }, 0);
-    $$.addToCache('getTotalDataSum', totalDataSum);
+    $$.addToCache('$getTotalDataSum', totalDataSum);
     return totalDataSum;
   };
 
@@ -7660,28 +7660,38 @@
   ChartInternal.prototype.getRatio = function (type, d) {
     var asPercent = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
     var $$ = this;
-    var api = $$.api;
-    var ratio = 0;
+    var ratio;
 
-    if (d && api.data.shown.call(api).length) {
-      ratio = d.ratio || d.value;
-
-      if (type === "arc") {
-        if ($$.hasType('gauge')) {
-          ratio = (d.endAngle - d.startAngle) / (Math.PI * ($$.config.gauge_fullCircle ? 2 : 1));
-        } else {
-          var total = $$.getTotalDataSum();
-          ratio = d.value / total;
-        }
-      } else if (type === "index") {
-        var _total = $$.getTotalPerIndex($$.axis.getId(d.id));
-
-        d.ratio = isNumber(d.value) && _total && _total[d.index] > 0 ? d.value / _total[d.index] : 0;
-        ratio = d.ratio;
+    if (type === 'arc') {
+      if ($$.hasType('gauge')) {
+        ratio = (d.endAngle - d.startAngle) / (Math.PI * ($$.config.gauge_fullCircle ? 2 : 1));
+      } else {
+        ratio = d.value / $$.getTotalDataSum();
       }
+    } else if (type === 'index') {
+      if (isNumber(d.value)) {
+        var total = $$.getTotalPerIndex($$.axis.getId(d.id));
+
+        if (total && total[d.index] > 0) {
+          ratio = d.value / total[d.index];
+        } else {
+          ratio = 0;
+        }
+      } else {
+        ratio = 0;
+      } // update d with potential new ratio
+
+
+      d.ratio = ratio;
+    } else {
+      ratio = d.ratio || d.value;
     }
 
-    return asPercent && ratio ? ratio * 100 : ratio;
+    if (asPercent) {
+      ratio *= 100;
+    }
+
+    return ratio;
   };
 
   ChartInternal.prototype.updateDataAttributes = function (name, attrs) {
@@ -9761,35 +9771,38 @@
           y0 = scale(0),
           offset = y0;
       targets.forEach(function (t) {
+        // skip if not part of offset (part1)
+        if (t.id === d.id || indices[t.id] !== indices[d.id]) {
+          return;
+        } // skip if not part of offset (part 2)
+
+
+        if (targetIds.indexOf(t.id) >= targetIds.indexOf(d.id)) {
+          return;
+        }
+
         var rowValues = $$.isStepType(d) ? $$.convertValuesToStep(t.values) : t.values;
         var isTargetNormalized = $$.isTargetNormalized(d.id);
         var values = rowValues.map(function (v) {
           return isTargetNormalized ? $$.getRatio("index", v, true) : v.value;
-        });
+        }); // check if the x values line up
 
-        if (t.id === d.id || indices[t.id] !== indices[d.id]) {
-          return;
+        if (isUndefined(rowValues[i]) || +rowValues[i].x !== +d.x) {
+          // "+" for timeseries
+          // if not, try to find the value that does line up
+          i = -1;
+          rowValues.forEach(function (v, j) {
+            var x1 = v.x.constructor === Date ? +v.x : v.x;
+            var x2 = d.x.constructor === Date ? +d.x : d.x;
+
+            if (x1 === x2) {
+              i = j;
+            }
+          });
         }
 
-        if (targetIds.indexOf(t.id) < targetIds.indexOf(d.id)) {
-          // check if the x values line up
-          if (isUndefined(rowValues[i]) || +rowValues[i].x !== +d.x) {
-            // "+" for timeseries
-            // if not, try to find the value that does line up
-            i = -1;
-            rowValues.forEach(function (v, j) {
-              var x1 = v.x.constructor === Date ? +v.x : v.x;
-              var x2 = d.x.constructor === Date ? +d.x : d.x;
-
-              if (x1 === x2) {
-                i = j;
-              }
-            });
-          }
-
-          if (i in rowValues && rowValues[i].value * d.value >= 0) {
-            offset += scale(values[i]) - y0;
-          }
+        if (i in rowValues && rowValues[i].value * d.value >= 0) {
+          offset += scale(values[i]) - y0;
         }
       });
       return offset;
