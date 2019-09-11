@@ -619,6 +619,10 @@ ChartInternal.prototype.convertValuesToStep = function (values) {
 ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
     const $$ = this;
 
+    if (!d) {
+        return 0;
+    }
+
     let ratio;
     if (type === 'arc') {
         if ($$.hasType('gauge')) {
