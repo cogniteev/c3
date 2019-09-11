@@ -7,7 +7,7 @@ import { ChartInternal } from './core';
  * @param value
  */
 ChartInternal.prototype.addToCache = function (key, value) {
-    this.cache[`$${key}`] = value;
+    this.cache[key] = value;
 };
 
 /**
@@ -17,7 +17,7 @@ ChartInternal.prototype.addToCache = function (key, value) {
  * @return {*}
  */
 ChartInternal.prototype.getFromCache = function (key) {
-    return this.cache[`$${key}`];
+    return this.cache[key];
 };
 
 /**

@@ -99,7 +99,7 @@ ChartInternal.prototype.getTotalPerIndex = function(axisId) {
         return null;
     }
 
-    const cached = $$.getFromCache('getTotalPerIndex');
+    const cached = $$.getFromCache('$getTotalPerIndex');
     if (cached !== undefined) {
         return cached[axisId];
     }
@@ -125,7 +125,7 @@ ChartInternal.prototype.getTotalPerIndex = function(axisId) {
             });
         });
 
-    $$.addToCache('getTotalPerIndex', sum);
+    $$.addToCache('$getTotalPerIndex', sum);
 
     return sum[axisId];
 };
@@ -142,7 +142,7 @@ ChartInternal.prototype.getTotalPerIndex = function(axisId) {
 ChartInternal.prototype.getTotalDataSum = function() {
     const $$ = this;
 
-    const cached = $$.getFromCache('getTotalDataSum');
+    const cached = $$.getFromCache('$getTotalDataSum');
     if (cached !== undefined) {
         return cached;
     }
@@ -154,7 +154,7 @@ ChartInternal.prototype.getTotalDataSum = function() {
         .map(d => d.value)
         .reduce((p, c) => p + c, 0);
 
-    $$.addToCache('getTotalDataSum', totalDataSum);
+    $$.addToCache('$getTotalDataSum', totalDataSum);
 
     return totalDataSum;
 };
@@ -608,6 +608,9 @@ ChartInternal.prototype.convertValuesToStep = function (values) {
     return converted;
 };
 
+
+window.getRatioCalled = 0;
+
 /**
  * Get ratio value
  *
@@ -620,8 +623,7 @@ ChartInternal.prototype.convertValuesToStep = function (values) {
 ChartInternal.prototype.getRatio = function(type, d, asPercent = false) {
     const $$ = this;
 
-    if (d && api.data.shown.call(api).length) {
-        ratio = d.ratio || d.value;
+    window.getRatioCalled += 1;
 
     let ratio;
     if (type === 'arc') {
