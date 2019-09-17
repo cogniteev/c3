@@ -1,4 +1,4 @@
-/* @license C3.js v0.7.4-patch.8 | (c) C3 Team and other contributors | http://c3js.org/ */
+/* @license C3.js v0.7.4-patch.9 | (c) C3 Team and other contributors | http://c3js.org/ */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
@@ -1246,7 +1246,7 @@
   };
 
   var c3 = {
-    version: "0.7.4-patch.8",
+    version: "0.7.4-patch.9",
     chart: {
       fn: Chart.prototype,
       internal: {
@@ -7561,6 +7561,30 @@
     }
   };
   /**
+   * Find the closest point from the x value or undefined if none satisfies conditions.
+   *
+   * @param {Array} targets
+   * @param {Array} x A value on X axis
+   * @return {Object|undefined}
+   */
+
+
+  ChartInternal.prototype.findClosestFromTargetsByX = function (targets, x) {
+    var closest;
+    var diff;
+    targets.forEach(function (t) {
+      t.values.forEach(function (d) {
+        var newDiff = Math.abs(x - d.x);
+
+        if (diff === undefined || newDiff < diff) {
+          closest = d;
+          diff = newDiff;
+        }
+      });
+    });
+    return closest;
+  };
+  /**
    * Using given compute distance method, returns the closest data point from the
    * given position.
    *
@@ -8645,15 +8669,7 @@
 
     var isHoveringDataPoint = function isHoveringDataPoint(mouse, closest) {
       return closest && ($$.isBarType(closest.id) || $$.dist(closest, mouse) < config.point_sensitivity);
-    }; // converts 'x' position (in pixel) to category index
-
-
-    var maxDataCount = $$.getMaxDataCount();
-    var xEventScale = d3.scaleQuantize() // use X range (in pixel) as domain
-    .domain([0, config.axis_rotated ? $$.height : $$.width]) // 0 to N evenly distributed
-    .range(maxDataCount ? Array.apply(null, {
-      length: maxDataCount
-    }).map(Function.call, Number) : [0]);
+    };
 
     var withName = function withName(d) {
       return d ? $$.addName(Object.assign({}, d)) : null;
@@ -8711,14 +8727,30 @@
       var selectedData;
 
       if (showSingleDataPoint) {
-        if (!closest) {
-          return mouseout();
+        if (closest) {
+          selectedData = [closest];
         }
-
-        selectedData = [closest];
       } else {
-        var mouseX = config.axis_rotated ? mouse[1] : mouse[0];
-        selectedData = $$.filterByIndex(targetsToShow, xEventScale(mouseX));
+        var closestByX;
+
+        if (closest) {
+          // reuse closest value
+          closestByX = closest;
+        } else {
+          // try to find the closest value by X values from the mouse position
+          var mouseX = config.axis_rotated ? mouse[1] : mouse[0];
+          closestByX = $$.findClosestFromTargetsByX(targetsToShow, $$.x.invert(mouseX));
+        } // highlight all data for this 'x' value
+
+
+        if (closestByX) {
+          selectedData = $$.filterByX(targetsToShow, closestByX.x);
+        }
+      } // ensure we have data to show
+
+
+      if (!selectedData || selectedData.length === 0) {
+        return mouseout();
       } // inject names for each point
 
 
@@ -9633,7 +9665,10 @@
   };
 
   ChartInternal.prototype.redrawBar = function (drawBar, withTransition, transition) {
-    return [(withTransition ? this.mainBar.transition(transition) : this.mainBar).attr('d', drawBar).style("stroke", this.color).style("fill", this.color).style("opacity", 1)];
+    var $$ = this;
+    return [(withTransition ? this.mainBar.transition(transition) : this.mainBar).attr('d', drawBar).style("stroke", this.color).style("fill", this.color).style("opacity", function (d) {
+      return $$.isTargetToShow(d.id) ? 1 : 0;
+    })];
   };
 
   ChartInternal.prototype.getBarW = function (axis, barTargetsNum) {
