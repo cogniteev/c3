@@ -46,6 +46,9 @@ describe('c3 chart interaction', function () {
             });
 
             describe('mouseover', function () {
+                let mouseoutCounter = 0;
+                let mouseoverCounter = 0;
+
                 beforeAll(function () {
                     args = {
                         data: {
@@ -56,10 +59,10 @@ describe('c3 chart interaction', function () {
                             ],
                             type: 'bar',
                             onmouseout: function() {
-                                window.mouseoutCounter += 1;
+                                mouseoutCounter += 1;
                             },
                             onmouseover: function() {
-                                window.mouseoverCounter += 1;
+                                mouseoverCounter += 1;
                             }
                         },
                         axis: {
@@ -69,23 +72,23 @@ describe('c3 chart interaction', function () {
                 });
 
                 beforeEach(function() {
-                    window.mouseoverCounter = 0;
-                    window.mouseoutCounter = 0;
+                    mouseoverCounter = 0;
+                    mouseoutCounter = 0;
                 });
 
                 it('should be undefined when not within bar', function () {
                     moveMouseOut();
 
-                    expect(window.mouseoutCounter).toEqual(0);
-                    expect(window.mouseoverCounter).toEqual(0);
+                    expect(mouseoutCounter).toEqual(0);
+                    expect(mouseoverCounter).toEqual(0);
                     expect(chart.internal.mouseover).toBeUndefined();
                 });
 
                 it('should be data value when within bar', function () {
                     moveMouse(31, 280);
 
-                    expect(window.mouseoutCounter).toEqual(0);
-                    expect(window.mouseoverCounter).toEqual(1);
+                    expect(mouseoutCounter).toEqual(0);
+                    expect(mouseoverCounter).toEqual(1);
                     expect(chart.internal.mouseover).toEqual({
                         x: 0,
                         value: 30,
@@ -99,8 +102,8 @@ describe('c3 chart interaction', function () {
                     moveMouse(31, 280);
                     moveMouseOut();
 
-                    expect(window.mouseoutCounter).toEqual(1);
-                    expect(window.mouseoverCounter).toEqual(1);
+                    expect(mouseoutCounter).toEqual(1);
+                    expect(mouseoverCounter).toEqual(1);
                     expect(chart.internal.mouseover).toBeUndefined();
                 });
 
@@ -109,8 +112,8 @@ describe('c3 chart interaction', function () {
                     moveMouseOut();
                     moveMouse(31, 280);
 
-                    expect(window.mouseoutCounter).toEqual(1);
-                    expect(window.mouseoverCounter).toEqual(2);
+                    expect(mouseoutCounter).toEqual(1);
+                    expect(mouseoverCounter).toEqual(2);
                     expect(chart.internal.mouseover).toEqual({
                         x: 0,
                         value: 30,
@@ -283,7 +286,7 @@ describe('c3 chart interaction', function () {
                     }
                 });
 
-                moveMouse(20, chart.internal.x(2.4));
+                moveMouse(20, 170);
 
                 barList.each(function() {
                     if (this.classList.contains('c3-bar-2') && !this.parentElement.classList.contains('c3-bars-data1')) {
@@ -377,6 +380,8 @@ describe('c3 chart interaction', function () {
 
     describe('line chart', function() {
         describe('tooltip_grouped=false', function() {
+            let clickedData = [];
+
             beforeAll(() => {
                 args = {
                     data: {
@@ -390,7 +395,7 @@ describe('c3 chart interaction', function () {
                             [ 'data1', 'data2' ]
                         ],
                         onclick: function(d) {
-                            window.clickedData.push(d);
+                            clickedData.push(d);
                         }
                     },
                     tooltip: {
@@ -418,7 +423,7 @@ describe('c3 chart interaction', function () {
             });
 
             beforeEach(function() {
-                window.clickedData = [];
+                clickedData = [];
             });
 
             it('shows tooltip with only hovered data', () => {
@@ -478,7 +483,7 @@ describe('c3 chart interaction', function () {
             it('clicks only on hovered point', () => {
                 clickMouse(144, 201);
 
-                expect(window.clickedData).toEqual([{
+                expect(clickedData).toEqual([{
                     x: 1,
                     index: 1,
                     value: 200,
@@ -542,7 +547,7 @@ describe('c3 chart interaction', function () {
                     clickMouse(340, 203);
                     clickMouse(537, 386);
 
-                    expect(window.clickedData).toEqual([
+                    expect(clickedData).toEqual([
                         {x: 1, value: -200, id: 'data3', index: 1, name: 'data3'},
                         {x: 3, value: 200, id: 'data2', index: 3, name: 'data2'},
                         {x: 5, value: -250, id: 'data1', index: 5, name: 'data1'}
@@ -580,6 +585,8 @@ describe('c3 chart interaction', function () {
         });
 
         describe('tooltip_grouped=true', function() {
+            let clickedData = [];
+
             beforeAll(() => {
                 args = {
                     data: {
@@ -593,7 +600,7 @@ describe('c3 chart interaction', function () {
                             [ 'data1', 'data2' ]
                         ],
                         onclick: function(d) {
-                            window.clickedData.push(d);
+                            clickedData.push(d);
                         }
                     },
                     tooltip: {
@@ -621,7 +628,7 @@ describe('c3 chart interaction', function () {
             });
 
             beforeEach(function() {
-                window.clickedData = [];
+                clickedData = [];
             });
 
             describe('with tooltip_horizontal=true', () => {
@@ -639,7 +646,7 @@ describe('c3 chart interaction', function () {
                     clickMouse(340, 203);
                     clickMouse(537, 386);
 
-                    expect(window.clickedData).toEqual([
+                    expect(clickedData).toEqual([
                         {x: 1, value: -200, id: 'data3', index: 1, name: 'data3'},
                         {x: 3, value: 200, id: 'data2', index: 3, name: 'data2'},
                         {x: 5, value: -250, id: 'data1', index: 5, name: 'data1'}
@@ -649,13 +656,26 @@ describe('c3 chart interaction', function () {
                 it('shows tooltip with all data', () => {
                     moveMouse(1, 1);
 
-                    expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('none');
+                    expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+                    let tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+                    expect(tooltipData.length).toBe(4); // header + data[123]
+
+                    expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+                    expect(tooltipData[1].querySelector('.value').textContent).toBe('30');
+
+                    expect(tooltipData[2].querySelector('.name').textContent).toBe('data3');
+                    expect(tooltipData[2].querySelector('.value').textContent).toBe('230');
+
+                    expect(tooltipData[3].querySelector('.name').textContent).toBe('data2');
+                    expect(tooltipData[3].querySelector('.value').textContent).toBe('130');
 
                     moveMouse(146, 46);
 
                     expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
 
-                    let tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+                    tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
 
                     expect(tooltipData.length).toBe(4); // header + data[123]
 
@@ -670,6 +690,140 @@ describe('c3 chart interaction', function () {
                 });
             });
         });
+    });
+
+    describe('line chart (multiple xs)', function() {
+        let clickedData = [];
+
+        beforeAll(() => {
+            args = {
+                data: {
+                    xs: {
+                        'data1': 'x1',
+                        'data2': 'x2',
+                    },
+                    columns: [
+                        ['x1', 10, 30, 45, 50, 70, 100],
+                        ['x2', 30, 50, 75, 100, 120],
+                        ['data1', 30, 200, 100, 400, 150, 250],
+                        ['data2', 20, 180, 240, 100, 190]
+                    ],
+                    type: 'line',
+                    onclick: function(d) {
+                        clickedData.push(d);
+                    }
+                },
+                tooltip: {
+                    grouped: true,
+                    horizontal: true
+                },
+                interaction: {
+                    enabled: true
+                }
+            };
+        });
+
+        beforeEach(function() {
+            clickedData = [];
+        });
+
+        it('shows tooltip with all data', () => {
+            moveMouse(1, 1);
+
+            expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+            let tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+            expect(tooltipData.length).toBe(2); // header + data[1]
+
+            expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+            expect(tooltipData[1].querySelector('.value').textContent).toBe('30');
+
+            moveMouse(107, 95);
+
+            expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+            tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+            expect(tooltipData.length).toBe(3); // header + data[12]
+
+            expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+            expect(tooltipData[1].querySelector('.value').textContent).toBe('200');
+
+            expect(tooltipData[2].querySelector('.name').textContent).toBe('data2');
+            expect(tooltipData[2].querySelector('.value').textContent).toBe('20');
+
+            moveMouse(430, 140);
+
+            expect(document.querySelector('.c3-tooltip-container').style.display).toEqual('block');
+
+            tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+            expect(tooltipData.length).toBe(3); // header + data[12]
+
+            expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+            expect(tooltipData[1].querySelector('.value').textContent).toBe('250');
+
+            expect(tooltipData[2].querySelector('.name').textContent).toBe('data2');
+            expect(tooltipData[2].querySelector('.value').textContent).toBe('100');
+        });
+    });
+
+    describe('scatter chart', function() {
+       describe('tooltip_grouped=true', function() {
+           beforeAll(() => {
+                args = {
+                    data: {
+                        columns: [
+                            ['data1', 30, null, 100, 400, -150, 250],
+                            ['data2', 50, 20, 10, 40, 15, 25],
+                            ['data3', -150, 120, 110, 140, 115, 125]
+                        ],
+                        type: 'scatter'
+                    },
+                    tooltip: {
+                        grouped: true
+                    },
+                    interaction: {
+                        enabled: true
+                    }
+                };
+           });
+
+           it('shows tooltip with visible data of currently hovered category', () => {
+               moveMouse(20, 20);
+
+               let tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+               expect(tooltipData.length).toBe(4); // header + data[123]
+
+               expect(tooltipData[1].querySelector('.name').textContent).toBe('data2');
+               expect(tooltipData[1].querySelector('.value').textContent).toBe('50');
+               expect(tooltipData[2].querySelector('.name').textContent).toBe('data1');
+               expect(tooltipData[2].querySelector('.value').textContent).toBe('30');
+               expect(tooltipData[3].querySelector('.name').textContent).toBe('data3');
+               expect(tooltipData[3].querySelector('.value').textContent).toBe('-150');
+
+               moveMouse(350, 354);
+
+               tooltipData = [...document.querySelectorAll('.c3-tooltip tr')];
+
+               expect(tooltipData.length).toBe(4); // header + data[123]
+
+               expect(tooltipData[1].querySelector('.name').textContent).toBe('data1');
+               expect(tooltipData[1].querySelector('.value').textContent).toBe('400');
+               expect(tooltipData[2].querySelector('.name').textContent).toBe('data3');
+               expect(tooltipData[2].querySelector('.value').textContent).toBe('140');
+               expect(tooltipData[3].querySelector('.name').textContent).toBe('data2');
+               expect(tooltipData[3].querySelector('.value').textContent).toBe('40');
+           });
+
+           it('shows x grid', () => {
+               moveMouse(20, 20);
+
+               expect(d3.select('.c3-xgrid-focus').style('visibility')).toBe('visible');
+           });
+       });
     });
 
     describe('area chart (timeseries)', function() {
